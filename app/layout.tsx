@@ -24,14 +24,14 @@ export const metadata: Metadata = {
     description:
       'Test the same web task through human eyes and WebMCP agent tools.',
     type: 'website',
-    images: [{ url: '/og.png', width: 1731, height: 909, alt: 'FrictionGlass Human / Agent Parity Lab' }],
+    images: [{ url: '/og.jpg', width: 1200, height: 630, alt: 'FrictionGlass Human / Agent Parity Lab' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'FrictionGlass — Human / Agent Parity Lab',
     description:
       'Test the same web task through human eyes and WebMCP agent tools.',
-    images: ['/og.png'],
+    images: ['/og.jpg'],
   },
 };
 
