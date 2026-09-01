@@ -6,6 +6,8 @@ FrictionGlass is a dual usability laboratory for the agent-native web. A person 
 
 **Live app:** [frictionglass-parity-lab.alx21.chatgpt.site](https://frictionglass-parity-lab.alx21.chatgpt.site)
 
+**Demo video:** [FrictionGlass — WebMCP Challenge Demo](https://youtu.be/98FaYPaIHOs) (2:17)
+
 ## Why WebMCP
 
 The agent side is not browser automation and not a remote MCP server. This live page registers ten tools with `document.modelContext.registerTool(...)`. Those tools use the same state and mutations as the visible React interface, so a judge can inspect tool calls and then see the trace, findings, and parity score change on the page.
@@ -80,3 +82,4 @@ The parity engine has deterministic tests for the baseline failures, repaired gu
 ## License
 
 MIT — see [LICENSE](./LICENSE).
+
