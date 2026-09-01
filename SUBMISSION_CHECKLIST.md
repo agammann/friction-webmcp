@@ -1,0 +1,23 @@
+# Release checklist
+
+- [x] Complete coherent human/agent product experience
+- [x] Ten page-owned `document.modelContext` tools
+- [x] Read/write and untrusted-content annotations
+- [x] Shared visible state for UI and tool mutations
+- [x] Human-only patch approval; no approval tool
+- [x] Baseline fee omission and consent bypass reproduced
+- [x] Repaired handler rejects completion before review
+- [x] Repaired tool returns fee, policy, total, and review token
+- [x] Baseline 50/100 → repaired 96/100
+- [x] Mobile viewport without horizontal overflow
+- [x] Typecheck, focused lint, 4/4 tests, production build
+- [x] High-severity dependency audit clean
+- [x] MIT license and complete local instructions
+- [x] Branded social preview
+- [x] Production URL deployed and independently verified
+- [x] Narrated 2:17 H.264/AAC demo rendered and audio verified locally
+- [ ] Public repository published and verified after final commit
+- [ ] Narrated public YouTube demo under three minutes with audio verified
+- [ ] Devpost story saved with observed URLs and no placeholders
+- [ ] User confirms final external submission action
+- [ ] `Project submitted!` and finalization checklist verified
