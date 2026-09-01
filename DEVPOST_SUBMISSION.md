@@ -8,6 +8,14 @@ Test the same task through human eyes and agent tools.
 
 [frictionglass-parity-lab.alx21.chatgpt.site](https://frictionglass-parity-lab.alx21.chatgpt.site)
 
+## Demo video
+
+[FrictionGlass — WebMCP Challenge Demo](https://youtu.be/98FaYPaIHOs) — narrated, 2:17
+
+## Source code
+
+[github.com/agammann/frictionglass-webmcp](https://github.com/agammann/frictionglass-webmcp)
+
 ## Inspiration
 
 WebMCP makes websites dramatically easier for agents to use because a live page can publish named, structured actions instead of asking an agent to infer buttons and forms. That creates a new usability question: does the agent receive the same information, consent gates, and final state that a person sees?
@@ -69,3 +77,4 @@ Future versions could import OpenTelemetry-style traces, compare multiple scenar
 5. In the repaired version, start and configure a run, then try `complete_simulated_task` before review; it must be rejected.
 6. Call `review_registration`, then complete with the returned token and `confirmed=true`.
 7. Complete or replay the repaired human run and confirm the visible score is 96/100.
+
