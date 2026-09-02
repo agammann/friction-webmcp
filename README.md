@@ -6,7 +6,7 @@ Friction is a dual usability laboratory for the agent-native web. A person compl
 
 **Live app:** [friction.alx21.chatgpt.site](https://friction.alx21.chatgpt.site)
 
-**Demo video:** [Friction — WebMCP Challenge Demo](https://youtu.be/98FaYPaIHOs) (2:17)
+**Demo video:** [Friction — WebMCP Challenge Demo](https://youtu.be/o4SgZ7Q6OOA) (2:16)
 
 ## Why WebMCP
 
