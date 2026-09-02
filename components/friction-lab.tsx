@@ -34,14 +34,18 @@ import {
   approvePatch,
   baselineAgentTrace,
   baselineHumanTrace,
+  completeRepairedAgentDraft,
   compareRuns,
+  configureAgentDraft,
   idleTrace,
   initialState,
   patchChanges,
   registrationOutcome,
+  reviewAgentDraft,
   repairedAgentTrace,
   repairedHumanTrace,
   replayPairedRun,
+  startedAgentDraft,
   type Finding,
   type LabState,
   type RunTrace,
@@ -349,7 +353,6 @@ export function FrictionLab() {
       commitRef.current(updater, message);
       window.dispatchEvent(new CustomEvent('friction:mutated', { detail: { message } }));
     };
-    const json = (value: unknown) => JSON.stringify(value);
     const requireDraft = () => {
       const draft = stateRef.current.agentDraft;
       if (!draft.started) throw new Error('Start an agent run before configuring the registration.');
@@ -358,43 +361,37 @@ export function FrictionLab() {
     return [
       {
         name: 'get_test_scenario',
+        title: 'Read test scenario',
         description: 'Read the active Friction event-registration scenario, expected outcome, visible prices, conditions, and parity dimensions. Read-only.',
         annotations: { readOnlyHint: true, untrustedContentHint: false },
         inputSchema: { type: 'object', properties: {}, additionalProperties: false },
-        execute: async () => json({ scenario_id: 'relayconf-registration', version: stateRef.current.version, task: 'Register for RelayConf with a quiet-zone reserved seat.', prices: { base: 72, quiet_zone_seat: 10, service_fee: 12, total: 94 }, fee_policy: registrationOutcome.feePolicy, parity_dimensions: ['outcome', 'information', 'consent', 'state', 'effort'] }),
+        execute: async () => ({ scenario_id: 'relayconf-registration', version: stateRef.current.version, task: 'Register for RelayConf with a quiet-zone reserved seat.', prices: { base: 72, quiet_zone_seat: 10, service_fee: 12, total: 94 }, fee_policy: registrationOutcome.feePolicy, parity_dimensions: ['outcome', 'information', 'consent', 'state', 'effort'] }),
       },
       {
         name: 'start_agent_run',
-        description: 'Start or reset the structured agent side of the current paired usability test. Mutating: clears the current agent trace on the visible page.',
+        title: 'Start agent run',
+        description: 'Start a fresh structured agent side of the current paired usability test. Mutating: always clears the current agent trace on the visible page.',
         annotations: { readOnlyHint: false, untrustedContentHint: false },
-        inputSchema: {
-          type: 'object',
-          properties: {
-            reset: {
-              type: 'boolean',
-              default: true,
-              description: 'Whether to clear the current agent trace before starting the run. Defaults to true.',
-            },
-          },
-          additionalProperties: false,
-        },
+        inputSchema: { type: 'object', properties: {}, additionalProperties: false },
         execute: async () => {
-          changed((current) => ({ ...current, agentRun: { ...idleTrace('agent', current.version), status: 'running', steps: [{ at: '00:00', label: 'Agent run started', detail: `Contract ${current.version}`, tone: 'neutral', tool: 'start_agent_run' }] }, agentDraft: { started: true, configured: false, reviewed: false, quietZoneSeat: false } }), 'Agent started a structured run');
-          return json({ started: true, scenario_id: 'relayconf-registration', version: stateRef.current.version });
+          changed((current) => ({ ...current, agentRun: { ...idleTrace('agent', current.version), status: 'running', steps: [{ at: '00:00', label: 'Agent run started', detail: `Contract ${current.version}`, tone: 'neutral', tool: 'start_agent_run' }] }, agentDraft: startedAgentDraft() }), 'Agent started a structured run');
+          return { started: true, scenario_id: 'relayconf-registration', version: stateRef.current.version };
         },
       },
       {
         name: 'inspect_task_state',
+        title: 'Inspect task state',
         description: 'Inspect the live shared scenario version, paired-run status, patch approval, current agent draft, and final registration state. Read-only.',
         annotations: { readOnlyHint: true, untrustedContentHint: false },
         inputSchema: { type: 'object', properties: {}, additionalProperties: false },
         execute: async () => {
           const current = stateRef.current;
-          return json({ version: current.version, patch_approved_by_human: current.patchApproved, human_run: current.humanRun.status, agent_run: current.agentRun.status, agent_draft: current.agentDraft, final_registration: current.agentRun.outcome ?? current.humanRun.outcome ?? null });
+          return { version: current.version, patch_approved_by_human: current.patchApproved, human_run: current.humanRun.status, agent_run: current.agentRun.status, agent_draft: current.agentDraft, final_registration: current.agentRun.outcome ?? current.humanRun.outcome ?? null };
         },
       },
       {
         name: 'configure_registration',
+        title: 'Configure registration',
         description: 'Configure the simulated RelayConf registration with a typed seat preference. Mutating: updates the agent draft and visible trace, but does not finalize.',
         annotations: { readOnlyHint: false, untrustedContentHint: false },
         inputSchema: {
@@ -417,25 +414,25 @@ export function FrictionLab() {
         execute: async (input) => {
           requireDraft();
           if (input.ticket !== 'general_admission' || input.seat_preference !== 'quiet_zone') throw new Error('Use the supported ticket and seat enum values.');
-          changed((current) => ({ ...current, agentDraft: { ...current.agentDraft, configured: true, quietZoneSeat: true }, agentRun: { ...current.agentRun, steps: [...current.agentRun.steps, { at: '00:03', label: 'Configured registration', detail: 'quiet_zone selected through typed input', tone: 'success', tool: 'configure_registration' }] } }), 'Agent configured the quiet-zone seat');
-          return json({ configured: true, ticket: 'general_admission', seat_preference: 'quiet_zone', subtotal: 82 });
+          changed((current) => ({ ...current, agentDraft: configureAgentDraft(current.agentDraft), agentRun: { ...current.agentRun, steps: [...current.agentRun.steps, { at: '00:03', label: 'Configured registration', detail: 'quiet_zone selected through typed input', tone: 'success', tool: 'configure_registration' }] } }), 'Agent configured the quiet-zone seat');
+          return { configured: true, ticket: 'general_admission', seat_preference: 'quiet_zone', subtotal: 82 };
         },
       },
       {
         name: 'review_registration',
+        title: 'Review registration',
         description: 'Review the itemized registration, material fee policy, and total before finalization. Mutating: records the review and issues a one-time review token.',
         annotations: { readOnlyHint: false, untrustedContentHint: false },
         inputSchema: { type: 'object', properties: {}, additionalProperties: false },
         execute: async () => {
-          const draft = requireDraft();
-          if (!draft.configured) throw new Error('Configure the registration before requesting review.');
-          const reviewToken = 'FG-REVIEW-94';
-          changed((current) => ({ ...current, agentDraft: { ...current.agentDraft, reviewed: true, reviewToken }, agentRun: { ...current.agentRun, steps: [...current.agentRun.steps, { at: '00:05', label: 'Reviewed total and policy', detail: '$94 total · $12 service fee · review token issued', tone: 'success', tool: 'review_registration' }] } }), 'Agent reviewed the full price and policy');
-          return json({ base_price: 72, option_price: 10, service_fee: 12, total: 94, fee_policy: registrationOutcome.feePolicy, reviewToken });
+          const reviewToken = `FG-REVIEW-${crypto.randomUUID()}`;
+          changed((current) => ({ ...current, agentDraft: reviewAgentDraft(current.agentDraft, reviewToken), agentRun: { ...current.agentRun, steps: [...current.agentRun.steps, { at: '00:05', label: 'Reviewed total and policy', detail: '$94 total · $12 service fee · one-time review token issued', tone: 'success', tool: 'review_registration' }] } }), 'Agent reviewed the full price and policy');
+          return { base_price: 72, option_price: 10, service_fee: 12, total: 94, fee_policy: registrationOutcome.feePolicy, reviewToken };
         },
       },
       {
         name: 'complete_simulated_task',
+        title: 'Complete simulated registration',
         description: repaired
           ? 'Finalize the simulated registration only after itemized review. Requires the reviewToken issued by review_registration plus confirmed=true. Updates the shared visible registration and agent trace. Returns completed, the full registration including total and fee policy, and the recorded consent status.'
           : 'Finalize the current simulated registration. Updates the shared visible registration and agent trace. Returns completed, ticket, quiet-zone selection, and the intentionally incomplete baseline subtotal.',
@@ -446,8 +443,10 @@ export function FrictionLab() {
               properties: {
                 reviewToken: {
                   type: 'string',
-                  const: 'FG-REVIEW-94',
-                  description: 'Single-use review token issued by review_registration for the current configuration.',
+                  minLength: 20,
+                  maxLength: 80,
+                  pattern: '^FG-REVIEW-[0-9a-f-]+$',
+                  description: 'One-time review token issued by review_registration for the current configuration.',
                 },
                 confirmed: {
                   type: 'boolean',
@@ -462,29 +461,34 @@ export function FrictionLab() {
         execute: async (input) => {
           const draft = requireDraft();
           if (!draft.configured) throw new Error('Configure the registration before completing it.');
-          if (stateRef.current.version === 'repaired' && (!draft.reviewed || input.reviewToken !== draft.reviewToken || input.confirmed !== true)) throw new Error('Review the itemized total, then pass its reviewToken with confirmed=true.');
-          changed((current) => ({ ...current, agentRun: current.version === 'repaired' ? repairedAgentTrace : baselineAgentTrace, agentDraft: { ...current.agentDraft, configured: true, quietZoneSeat: true } }), repaired ? 'Agent confirmed after the review gate' : 'Agent finalized without the human review gate');
+          const completedDraft = repaired
+            ? completeRepairedAgentDraft(draft, input.reviewToken, input.confirmed)
+            : { ...draft, completed: true };
+          changed((current) => ({ ...current, agentRun: current.version === 'repaired' ? repairedAgentTrace : baselineAgentTrace, agentDraft: completedDraft }), repaired ? 'Agent confirmed after the review gate' : 'Agent finalized without the human review gate');
           return repaired
-            ? json({ completed: true, registration: registrationOutcome, consent: { reviewed: true, confirmed: true } })
-            : json({ completed: true, ticket: 'General admission', quiet_zone_seat: true, subtotal: 82 });
+            ? { completed: true, registration: registrationOutcome, consent: { reviewed: true, confirmed: true, review_token_consumed: true } }
+            : { completed: true, ticket: 'General admission', quiet_zone_seat: true, subtotal: 82 };
         },
       },
       {
         name: 'get_human_interaction_trace',
+        title: 'Read human interaction trace',
         description: 'Read the visible human interaction trace, including steps, duration, backtracks, hesitations, and final outcome. Read-only; free-form human notes would be untrusted.',
         annotations: { readOnlyHint: true, untrustedContentHint: true },
         inputSchema: { type: 'object', properties: {}, additionalProperties: false },
-        execute: async () => json(stateRef.current.humanRun),
+        execute: async () => stateRef.current.humanRun,
       },
       {
         name: 'compare_human_agent_runs',
+        title: 'Compare human and agent runs',
         description: 'Compare the completed human and agent runs across outcome, information, consent, state, and effort. Read-only and deterministic.',
         annotations: { readOnlyHint: true, untrustedContentHint: false },
         inputSchema: { type: 'object', properties: {}, additionalProperties: false },
-        execute: async () => json(compareRuns(stateRef.current.humanRun, stateRef.current.agentRun)),
+        execute: async () => compareRuns(stateRef.current.humanRun, stateRef.current.agentRun),
       },
       {
         name: 'submit_parity_finding',
+        title: 'Submit parity finding',
         description: 'Record an evidence-backed parity finding for visible human review. Mutating; title, evidence, and proposal are untrusted agent-authored content.',
         annotations: { readOnlyHint: false, untrustedContentHint: true },
         inputSchema: {
@@ -520,11 +524,12 @@ export function FrictionLab() {
         execute: async (input) => {
           const custom: Finding = { id: `FG-AGENT-${stateRef.current.customFindings.length + 1}`, severity: 'moderate', dimension: input.dimension as Finding['dimension'], title: String(input.title), evidence: String(input.evidence), proposal: String(input.proposal) };
           changed((current) => ({ ...current, customFindings: [...current.customFindings, custom] }), `Agent submitted finding ${custom.id}`);
-          return json({ submitted: true, finding_id: custom.id, approval_status: 'visible_review_only' });
+          return { submitted: true, finding_id: custom.id, approval_status: 'visible_review_only' };
         },
       },
       {
         name: 'propose_interface_patch',
+        title: 'Propose interface patch',
         description: 'Propose a concise UI or WebMCP contract change for human review. Mutating: adds an untrusted proposal note. This tool cannot approve or apply patches.',
         annotations: { readOnlyHint: false, untrustedContentHint: true },
         inputSchema: {
@@ -542,7 +547,7 @@ export function FrictionLab() {
         },
         execute: async ({ change }) => {
           changed((current) => ({ ...current, proposedNotes: [...current.proposedNotes, String(change)] }), 'Agent added a patch proposal for human review');
-          return json({ proposed: true, applied: false, approval_required: 'Human must use the visible Friction interface.' });
+          return { proposed: true, applied: false, approval_required: 'Human must use the visible Friction interface.' };
         },
       },
     ];

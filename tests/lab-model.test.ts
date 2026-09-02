@@ -5,11 +5,15 @@ import {
   approvePatch,
   baselineAgentTrace,
   baselineHumanTrace,
+  completeRepairedAgentDraft,
   compareRuns,
+  configureAgentDraft,
   initialState,
+  reviewAgentDraft,
   replayPairedRun,
   repairedAgentTrace,
   repairedHumanTrace,
+  startedAgentDraft,
 } from '../lib/lab-model.ts';
 
 void test('baseline comparison exposes the intended information and consent gaps', () => {
@@ -46,4 +50,50 @@ void test('paired replay uses repaired traces only after approval', () => {
   assert.equal(baselineReplay.agentRun.version, 'baseline');
   assert.equal(repairedReplay.agentRun.version, 'repaired');
   assert.equal(compareRuns(repairedReplay.humanRun, repairedReplay.agentRun).score, 96);
+});
+
+void test('configuration invalidates any earlier review token', () => {
+  const configured = configureAgentDraft(startedAgentDraft());
+  const reviewed = reviewAgentDraft(configured, 'FG-REVIEW-first-token');
+  const reconfigured = configureAgentDraft(reviewed);
+
+  assert.equal(reconfigured.configured, true);
+  assert.equal(reconfigured.reviewed, false);
+  assert.equal(reconfigured.reviewToken, undefined);
+});
+
+void test('repaired completion consumes the review token and blocks replay', () => {
+  const reviewed = reviewAgentDraft(
+    configureAgentDraft(startedAgentDraft()),
+    'FG-REVIEW-current-token',
+  );
+  const completed = completeRepairedAgentDraft(
+    reviewed,
+    'FG-REVIEW-current-token',
+    true,
+  );
+
+  assert.equal(completed.completed, true);
+  assert.equal(completed.reviewed, false);
+  assert.equal(completed.reviewToken, undefined);
+  assert.throws(
+    () => completeRepairedAgentDraft(completed, 'FG-REVIEW-current-token', true),
+    /already complete/,
+  );
+});
+
+void test('repaired completion rejects stale tokens and missing confirmation', () => {
+  const reviewed = reviewAgentDraft(
+    configureAgentDraft(startedAgentDraft()),
+    'FG-REVIEW-current-token',
+  );
+
+  assert.throws(
+    () => completeRepairedAgentDraft(reviewed, 'FG-REVIEW-stale-token', true),
+    /pass its reviewToken/,
+  );
+  assert.throws(
+    () => completeRepairedAgentDraft(reviewed, 'FG-REVIEW-current-token', false),
+    /confirmed=true/,
+  );
 });

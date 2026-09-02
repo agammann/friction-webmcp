@@ -1,0 +1,42 @@
+# Friction
+
+> Friction is a dual usability laboratory for testing the same task through a visible human interface and page-owned WebMCP agent tools.
+
+## Product
+
+- Live app: https://friction.alx21.chatgpt.site/
+- Source: https://github.com/agammann/friction-webmcp
+- License: MIT
+- Scenario: RelayConf event registration
+- Parity dimensions: outcome, information, consent, state, and effort
+
+## WebMCP tools
+
+The top-level page registers ten imperative tools over the same visible browser state:
+
+- get_test_scenario: read the active task, prices, conditions, and expected outcome
+- start_agent_run: start a fresh structured agent trace
+- inspect_task_state: read the shared scenario, draft, approval, and completion state
+- configure_registration: select the supported ticket and quiet-zone seat
+- review_registration: return the itemized total and issue a one-time review token
+- complete_simulated_task: require the current review token and confirmed=true before completion
+- get_human_interaction_trace: read the visible human journey and usability signals
+- compare_human_agent_runs: compare outcome, information, consent, state, and effort
+- submit_parity_finding: add an evidence-backed finding for visible human review
+- propose_interface_patch: propose a change without approving or applying it
+
+## Repaired workflow example
+
+1. Call start_agent_run with an empty object.
+2. Call configure_registration with ticket="general_admission" and seat_preference="quiet_zone".
+3. Call review_registration and retain the returned one-time reviewToken.
+4. Call complete_simulated_task with that reviewToken and confirmed=true.
+5. Call compare_human_agent_runs to inspect the parity result.
+
+## Safety boundary
+
+Agents can submit findings and propose interface changes. Patch approval is deliberately available only through the visible human interface and is not exposed as a WebMCP tool.
+
+## Updates
+
+The live app and repository are the authoritative sources for current behavior.

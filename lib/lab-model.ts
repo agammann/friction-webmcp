@@ -62,8 +62,77 @@ export type AgentDraft = {
   configured: boolean;
   reviewed: boolean;
   reviewToken?: string;
+  completed: boolean;
   quietZoneSeat: boolean;
 };
+
+export function idleAgentDraft(): AgentDraft {
+  return {
+    started: false,
+    configured: false,
+    reviewed: false,
+    completed: false,
+    quietZoneSeat: false,
+  };
+}
+
+export function startedAgentDraft(): AgentDraft {
+  return { ...idleAgentDraft(), started: true };
+}
+
+export function configureAgentDraft(draft: AgentDraft): AgentDraft {
+  if (!draft.started) {
+    throw new Error('Start an agent run before configuring the registration.');
+  }
+  if (draft.completed) {
+    throw new Error('Start a new agent run before changing a completed registration.');
+  }
+
+  return {
+    ...draft,
+    configured: true,
+    reviewed: false,
+    reviewToken: undefined,
+    quietZoneSeat: true,
+  };
+}
+
+export function reviewAgentDraft(
+  draft: AgentDraft,
+  reviewToken: string,
+): AgentDraft {
+  if (!draft.started || !draft.configured) {
+    throw new Error('Configure the registration before requesting review.');
+  }
+  if (draft.completed) {
+    throw new Error('Start a new agent run before reviewing another registration.');
+  }
+
+  return { ...draft, reviewed: true, reviewToken };
+}
+
+export function completeRepairedAgentDraft(
+  draft: AgentDraft,
+  reviewToken: unknown,
+  confirmed: unknown,
+): AgentDraft {
+  if (!draft.started || !draft.configured) {
+    throw new Error('Configure the registration before completing it.');
+  }
+  if (draft.completed) {
+    throw new Error('This registration is already complete. Start a new agent run to repeat the task.');
+  }
+  if (!draft.reviewed || reviewToken !== draft.reviewToken || confirmed !== true) {
+    throw new Error('Review the itemized total, then pass its reviewToken with confirmed=true.');
+  }
+
+  return {
+    ...draft,
+    reviewed: false,
+    reviewToken: undefined,
+    completed: true,
+  };
+}
 
 export type LabState = {
   version: LabVersion;
@@ -247,7 +316,7 @@ export const initialState: LabState = {
   patchApproved: false,
   customFindings: [],
   proposedNotes: [],
-  agentDraft: { started: false, configured: false, reviewed: false, quietZoneSeat: false },
+  agentDraft: idleAgentDraft(),
 };
 
 export function approvePatch(state: LabState, approvedAt: string): LabState {
@@ -258,7 +327,7 @@ export function approvePatch(state: LabState, approvedAt: string): LabState {
     patchApprovedAt: approvedAt,
     humanRun: idleTrace('human', 'repaired'),
     agentRun: idleTrace('agent', 'repaired'),
-    agentDraft: { started: false, configured: false, reviewed: false, quietZoneSeat: false },
+    agentDraft: idleAgentDraft(),
   };
 }
 
@@ -268,6 +337,12 @@ export function replayPairedRun(state: LabState): LabState {
     ...state,
     humanRun: repaired ? repairedHumanTrace : baselineHumanTrace,
     agentRun: repaired ? repairedAgentTrace : baselineAgentTrace,
-    agentDraft: { started: true, configured: true, reviewed: repaired, reviewToken: repaired ? 'FG-REVIEW-94' : undefined, quietZoneSeat: true },
+    agentDraft: {
+      started: true,
+      configured: true,
+      reviewed: false,
+      completed: true,
+      quietZoneSeat: true,
+    },
   };
 }
