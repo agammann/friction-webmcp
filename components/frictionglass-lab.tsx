@@ -140,9 +140,9 @@ function ScoreCard({ state }: { state: LabState }) {
     <aside className="glass-panel rounded-[18px] p-5">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink/45">Parity score</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink/65">Parity score</p>
           <p className="mt-1 font-mono text-4xl font-semibold tracking-[-0.08em]">
-            {ready ? report.score : '—'}<span className="text-xl text-ink/35">/100</span>
+            {ready ? report.score : '—'}<span className="text-xl text-ink/55">/100</span>
           </p>
         </div>
         <span className={`grid size-10 place-items-center rounded-full ${report.criticalFailures ? 'bg-signal/10 text-signal' : ready ? 'bg-mint/10 text-mint' : 'bg-ink/5 text-ink/35'}`}>
@@ -153,7 +153,7 @@ function ScoreCard({ state }: { state: LabState }) {
       <div className="mt-5 space-y-2.5">
         {ready ? report.metrics.map((metric) => (
           <div key={metric.key} className="flex items-center justify-between border-b border-ink/8 pb-2 text-xs last:border-0">
-            <span className="text-ink/55">{metric.label}</span>
+            <span className="text-ink/70">{metric.label}</span>
             <span className={`flex items-center gap-1.5 text-right font-semibold ${metric.pass ? 'text-ink' : 'text-signal'}`}>
               {metric.pass ? <Check className="size-3" /> : <CircleAlert className="size-3" />}{metric.detail}
             </span>
@@ -168,7 +168,7 @@ function ScoreCard({ state }: { state: LabState }) {
             {report.criticalFailures ? <CircleAlert className="size-4" /> : <CheckCircle2 className="size-4" />}
             {report.criticalFailures ? `${report.criticalFailures} critical failures` : 'Parity gate passed'}
           </p>
-          <p className="mt-1 text-[11px] leading-4 text-ink/60">{report.summary}</p>
+          <p className="mt-1 text-[11px] leading-4 text-ink/75">{report.summary}</p>
         </div>
       ) : null}
     </aside>
@@ -367,7 +367,17 @@ export function FrictionGlassLab() {
         name: 'start_agent_run',
         description: 'Start or reset the structured agent side of the current paired usability test. Mutating: clears the current agent trace on the visible page.',
         annotations: { readOnlyHint: false, untrustedContentHint: false },
-        inputSchema: { type: 'object', properties: { reset: { type: 'boolean', default: true } }, additionalProperties: false },
+        inputSchema: {
+          type: 'object',
+          properties: {
+            reset: {
+              type: 'boolean',
+              default: true,
+              description: 'Whether to clear the current agent trace before starting the run. Defaults to true.',
+            },
+          },
+          additionalProperties: false,
+        },
         execute: async () => {
           changed((current) => ({ ...current, agentRun: { ...idleTrace('agent', current.version), status: 'running', steps: [{ at: '00:00', label: 'Agent run started', detail: `Contract ${current.version}`, tone: 'neutral', tool: 'start_agent_run' }] }, agentDraft: { started: true, configured: false, reviewed: false, quietZoneSeat: false } }), 'Agent started a structured run');
           return json({ started: true, scenario_id: 'relayconf-registration', version: stateRef.current.version });
@@ -387,7 +397,23 @@ export function FrictionGlassLab() {
         name: 'configure_registration',
         description: 'Configure the simulated RelayConf registration with a typed seat preference. Mutating: updates the agent draft and visible trace, but does not finalize.',
         annotations: { readOnlyHint: false, untrustedContentHint: false },
-        inputSchema: { type: 'object', properties: { ticket: { type: 'string', enum: ['general_admission'] }, seat_preference: { type: 'string', enum: ['quiet_zone'] } }, required: ['ticket', 'seat_preference'], additionalProperties: false },
+        inputSchema: {
+          type: 'object',
+          properties: {
+            ticket: {
+              type: 'string',
+              enum: ['general_admission'],
+              description: 'Ticket tier to reserve for the simulated registration.',
+            },
+            seat_preference: {
+              type: 'string',
+              enum: ['quiet_zone'],
+              description: 'Requested seating area. The quiet zone has a fee policy that differs by scenario version.',
+            },
+          },
+          required: ['ticket', 'seat_preference'],
+          additionalProperties: false,
+        },
         execute: async (input) => {
           requireDraft();
           if (input.ticket !== 'general_admission' || input.seat_preference !== 'quiet_zone') throw new Error('Use the supported ticket and seat enum values.');
@@ -411,11 +437,27 @@ export function FrictionGlassLab() {
       {
         name: 'complete_simulated_task',
         description: repaired
-          ? 'Finalize the registration only after itemized review. Requires the issued reviewToken and confirmed=true. Mutating and consequential within the simulation.'
-          : 'Finish the current registration configuration and save the result. Mutating.',
+          ? 'Finalize the simulated registration only after itemized review. Requires the reviewToken issued by review_registration plus confirmed=true. Updates the shared visible registration and agent trace. Returns completed, the full registration including total and fee policy, and the recorded consent status.'
+          : 'Finalize the current simulated registration. Updates the shared visible registration and agent trace. Returns completed, ticket, quiet-zone selection, and the intentionally incomplete baseline subtotal.',
         annotations: { readOnlyHint: false, untrustedContentHint: false },
         inputSchema: repaired
-          ? { type: 'object', properties: { reviewToken: { type: 'string', const: 'FG-REVIEW-94' }, confirmed: { type: 'boolean', const: true } }, required: ['reviewToken', 'confirmed'], additionalProperties: false }
+          ? {
+              type: 'object',
+              properties: {
+                reviewToken: {
+                  type: 'string',
+                  const: 'FG-REVIEW-94',
+                  description: 'Single-use review token issued by review_registration for the current configuration.',
+                },
+                confirmed: {
+                  type: 'boolean',
+                  const: true,
+                  description: 'Explicit confirmation that the reviewed registration should be finalized; must be true.',
+                },
+              },
+              required: ['reviewToken', 'confirmed'],
+              additionalProperties: false,
+            }
           : { type: 'object', properties: {}, additionalProperties: false },
         execute: async (input) => {
           const draft = requireDraft();
@@ -445,7 +487,36 @@ export function FrictionGlassLab() {
         name: 'submit_parity_finding',
         description: 'Record an evidence-backed parity finding for visible human review. Mutating; title, evidence, and proposal are untrusted agent-authored content.',
         annotations: { readOnlyHint: false, untrustedContentHint: true },
-        inputSchema: { type: 'object', properties: { dimension: { type: 'string', enum: ['Information', 'Consent', 'Human effort'] }, title: { type: 'string', minLength: 5, maxLength: 120 }, evidence: { type: 'string', minLength: 10, maxLength: 500 }, proposal: { type: 'string', minLength: 10, maxLength: 500 } }, required: ['dimension', 'title', 'evidence', 'proposal'], additionalProperties: false },
+        inputSchema: {
+          type: 'object',
+          properties: {
+            dimension: {
+              type: 'string',
+              enum: ['Information', 'Consent', 'Human effort'],
+              description: 'Parity dimension affected by the observed difference.',
+            },
+            title: {
+              type: 'string',
+              minLength: 5,
+              maxLength: 120,
+              description: 'Short human-readable name for the parity issue.',
+            },
+            evidence: {
+              type: 'string',
+              minLength: 10,
+              maxLength: 500,
+              description: 'Specific trace evidence showing how the human and agent experiences diverged.',
+            },
+            proposal: {
+              type: 'string',
+              minLength: 10,
+              maxLength: 500,
+              description: 'Concrete interface or WebMCP contract change that would address the finding.',
+            },
+          },
+          required: ['dimension', 'title', 'evidence', 'proposal'],
+          additionalProperties: false,
+        },
         execute: async (input) => {
           const custom: Finding = { id: `FG-AGENT-${stateRef.current.customFindings.length + 1}`, severity: 'moderate', dimension: input.dimension as Finding['dimension'], title: String(input.title), evidence: String(input.evidence), proposal: String(input.proposal) };
           changed((current) => ({ ...current, customFindings: [...current.customFindings, custom] }), `Agent submitted finding ${custom.id}`);
@@ -456,7 +527,19 @@ export function FrictionGlassLab() {
         name: 'propose_interface_patch',
         description: 'Propose a concise UI or WebMCP contract change for human review. Mutating: adds an untrusted proposal note. This tool cannot approve or apply patches.',
         annotations: { readOnlyHint: false, untrustedContentHint: true },
-        inputSchema: { type: 'object', properties: { change: { type: 'string', minLength: 10, maxLength: 500 } }, required: ['change'], additionalProperties: false },
+        inputSchema: {
+          type: 'object',
+          properties: {
+            change: {
+              type: 'string',
+              minLength: 10,
+              maxLength: 500,
+              description: 'Concise description of the proposed UI or WebMCP contract change for human review.',
+            },
+          },
+          required: ['change'],
+          additionalProperties: false,
+        },
         execute: async ({ change }) => {
           changed((current) => ({ ...current, proposedNotes: [...current.proposedNotes, String(change)] }), 'Agent added a patch proposal for human review');
           return json({ proposed: true, applied: false, approval_required: 'Human must use the visible FrictionGlass interface.' });
@@ -640,3 +723,4 @@ export function FrictionGlassLab() {
     </main>
   );
 }
+
