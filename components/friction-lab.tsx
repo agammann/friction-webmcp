@@ -48,7 +48,7 @@ import {
   type TraceStep,
 } from '@/lib/lab-model';
 
-const STORAGE_KEY = 'frictionglass-lab-v1';
+const STORAGE_KEY = 'friction-lab-v1';
 
 const toolCatalog = [
   ['get_test_scenario', 'Read the task, choices, prices, and conditions.', 'read'],
@@ -311,7 +311,7 @@ function FindingCard({ finding }: { finding: Finding }) {
   );
 }
 
-export function FrictionGlassLab() {
+export function FrictionLab() {
   const [state, setState] = useState<LabState>(initialState);
   const stateRef = useRef(state);
   const commitRef = useRef<(updater: (current: LabState) => LabState, message?: string) => void>(() => undefined);
@@ -347,7 +347,7 @@ export function FrictionGlassLab() {
     const repaired = state.version === 'repaired';
     const changed = (updater: (current: LabState) => LabState, message: string) => {
       commitRef.current(updater, message);
-      window.dispatchEvent(new CustomEvent('frictionglass:mutated', { detail: { message } }));
+      window.dispatchEvent(new CustomEvent('friction:mutated', { detail: { message } }));
     };
     const json = (value: unknown) => JSON.stringify(value);
     const requireDraft = () => {

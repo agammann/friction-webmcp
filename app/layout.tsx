@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ??
-      'https://frictionglass-parity-lab.alx21.chatgpt.site',
+      'https://friction.alx21.chatgpt.site',
   ),
   title: 'Friction — Human / Agent Parity Lab',
   description: 'Test the same web task through human eyes and WebMCP agent tools.',

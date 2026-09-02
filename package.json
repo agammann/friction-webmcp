@@ -11,7 +11,7 @@
     "start": "wrangler dev --config dist/server/wrangler.json",
     "test": "node --experimental-strip-types --test --test-isolation=none tests/*.test.ts",
     "typecheck": "tsc --noEmit",
-    "lint": "oxlint app components/frictionglass-lab.tsx components/ui/button.tsx components/ui/badge.tsx components/ui/card.tsx lib types",
+    "lint": "oxlint app components/friction-lab.tsx components/ui/button.tsx components/ui/badge.tsx components/ui/card.tsx lib types",
     "format": "oxfmt"
   },
   "dependencies": {

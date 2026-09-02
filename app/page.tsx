@@ -1,5 +1,5 @@
-import { FrictionGlassLab } from '@/components/frictionglass-lab';
+import { FrictionLab } from '@/components/friction-lab';
 
 export default function Home() {
-  return <FrictionGlassLab />;
+  return <FrictionLab />;
 }

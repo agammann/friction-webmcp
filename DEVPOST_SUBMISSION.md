@@ -6,7 +6,7 @@ Test the same task through human eyes and agent tools.
 
 ## Live app
 
-[frictionglass-parity-lab.alx21.chatgpt.site](https://frictionglass-parity-lab.alx21.chatgpt.site)
+[friction.alx21.chatgpt.site](https://friction.alx21.chatgpt.site)
 
 ## Demo video
 

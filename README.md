@@ -4,7 +4,7 @@
 
 Friction is a dual usability laboratory for the agent-native web. A person completes a task through the normal visual interface while an AI agent completes the same task through page-owned WebMCP tools. The lab records both journeys, compares five parity dimensions, proposes an evidence-backed repair, and lets a human approve the patch before both sides retest.
 
-**Live app:** [frictionglass-parity-lab.alx21.chatgpt.site](https://frictionglass-parity-lab.alx21.chatgpt.site)
+**Live app:** [friction.alx21.chatgpt.site](https://friction.alx21.chatgpt.site)
 
 **Demo video:** [Friction — WebMCP Challenge Demo](https://youtu.be/98FaYPaIHOs) (2:17)
 
