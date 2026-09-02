@@ -1,12 +1,12 @@
-# FrictionGlass
+# Friction
 
 **Test the same task through human eyes and agent tools.**
 
-FrictionGlass is a dual usability laboratory for the agent-native web. A person completes a task through the normal visual interface while an AI agent completes the same task through page-owned WebMCP tools. The lab records both journeys, compares five parity dimensions, proposes an evidence-backed repair, and lets a human approve the patch before both sides retest.
+Friction is a dual usability laboratory for the agent-native web. A person completes a task through the normal visual interface while an AI agent completes the same task through page-owned WebMCP tools. The lab records both journeys, compares five parity dimensions, proposes an evidence-backed repair, and lets a human approve the patch before both sides retest.
 
 **Live app:** [frictionglass-parity-lab.alx21.chatgpt.site](https://frictionglass-parity-lab.alx21.chatgpt.site)
 
-**Demo video:** [FrictionGlass — WebMCP Challenge Demo](https://youtu.be/98FaYPaIHOs) (2:17)
+**Demo video:** [Friction — WebMCP Challenge Demo](https://youtu.be/98FaYPaIHOs) (2:17)
 
 ## Why WebMCP
 
@@ -43,7 +43,7 @@ There is deliberately **no agent-callable approval tool**.
 
 Open the app in ChatGPT’s in-app browser with site tools available, then try:
 
-1. “Inspect the FrictionGlass scenario and compare the completed baseline human and agent runs.”
+1. “Inspect the Friction scenario and compare the completed baseline human and agent runs.”
 2. “Start a fresh agent run, configure general admission with the quiet-zone seat, and complete it.”
 3. After approving the visible patch: “Start a repaired run and try to complete it without reviewing first. Then review the registration and complete it with explicit confirmation.”
 4. “Compare the repaired human and agent runs and explain the score change.”
@@ -82,4 +82,3 @@ The parity engine has deterministic tests for the baseline failures, repaired gu
 ## License
 
 MIT — see [LICENSE](./LICENSE).
-

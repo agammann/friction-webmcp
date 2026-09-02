@@ -1,4 +1,4 @@
-# FrictionGlass — Devpost submission copy
+# Friction — Devpost submission copy
 
 ## Tagline
 
@@ -10,17 +10,17 @@ Test the same task through human eyes and agent tools.
 
 ## Demo video
 
-[FrictionGlass — WebMCP Challenge Demo](https://youtu.be/98FaYPaIHOs) — narrated, 2:17
+[Friction — WebMCP Challenge Demo](https://youtu.be/98FaYPaIHOs) — narrated, 2:17
 
 ## Source code
 
-[github.com/agammann/frictionglass-webmcp](https://github.com/agammann/frictionglass-webmcp)
+[github.com/agammann/friction-webmcp](https://github.com/agammann/friction-webmcp)
 
 ## Inspiration
 
 WebMCP makes websites dramatically easier for agents to use because a live page can publish named, structured actions instead of asking an agent to infer buttons and forms. That creates a new usability question: does the agent receive the same information, consent gates, and final state that a person sees?
 
-FrictionGlass is a dual usability laboratory for answering that question. It pairs one visual journey with one WebMCP journey, exposes the differences, repairs both interfaces together, and proves the improvement with a retest.
+Friction is a dual usability laboratory for answering that question. It pairs one visual journey with one WebMCP journey, exposes the differences, repairs both interfaces together, and proves the improvement with a retest.
 
 ## What it does
 
@@ -30,13 +30,13 @@ The deterministic RelayConf scenario contains three intentional problems:
 - the baseline agent result omits a $12 service fee and refund condition;
 - an ambiguously described completion tool finalizes without the human review gate.
 
-FrictionGlass records both traces and scores outcome, information, consent, state, and effort parity. It produces evidence-backed findings and a four-part patch. A human must approve that patch through the visible UI—approval is intentionally not agent-callable. After approval, the human option becomes clear, the tool returns an itemized total and policy, and finalization requires a review token plus `confirmed=true`. The paired score rises from 50/100 to 96/100.
+Friction records both traces and scores outcome, information, consent, state, and effort parity. It produces evidence-backed findings and a four-part patch. A human must approve that patch through the visible UI—approval is intentionally not agent-callable. After approval, the human option becomes clear, the tool returns an itemized total and policy, and finalization requires a review token plus `confirmed=true`. The paired score rises from 50/100 to 96/100.
 
 ## Why WebMCP is essential
 
 WebMCP generates one side of the experiment. The page registers ten tools with `document.modelContext.registerTool(...)`; these are not a remote MCP server and do not automate the DOM. Tool handlers and visual controls share the same React state and durable browser storage, so agent mutations immediately change the visible trace, findings, and comparison.
 
-Without WebMCP, FrictionGlass could test only visual automation. With WebMCP, it can inspect the explicit contract a site offers to agents and compare that contract against the human experience.
+Without WebMCP, Friction could test only visual automation. With WebMCP, it can inspect the explicit contract a site offers to agents and compare that contract against the human experience.
 
 ## How humans and agents work together
 
@@ -44,7 +44,7 @@ People complete and judge the visual task, report hesitation, and retain approva
 
 ## How we built it
 
-FrictionGlass uses React 19, TypeScript, Vinext, Tailwind CSS, shadcn primitives, and ChatGPT Sites-compatible Cloudflare output. Ten page-owned WebMCP tools use restrictive JSON Schemas, runtime checks, read/write annotations, untrusted-content hints, feature detection, and registration cleanup with `AbortController`.
+Friction uses React 19, TypeScript, Vinext, Tailwind CSS, shadcn primitives, and ChatGPT Sites-compatible Cloudflare output. Ten page-owned WebMCP tools use restrictive JSON Schemas, runtime checks, read/write annotations, untrusted-content hints, feature detection, and registration cleanup with `AbortController`.
 
 The account-free demo persists locally in the browser, making the before/after experiment repeatable without credentials or external APIs. Deterministic tests cover the parity score, consent and information failures, approval transition, and repaired replay.
 
@@ -77,4 +77,3 @@ Future versions could import OpenTelemetry-style traces, compare multiple scenar
 5. In the repaired version, start and configure a run, then try `complete_simulated_task` before review; it must be rejected.
 6. Call `review_registration`, then complete with the returned token and `confirmed=true`.
 7. Complete or replay the repaired human run and confirm the visible score is 96/100.
-

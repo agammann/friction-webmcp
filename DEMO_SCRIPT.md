@@ -1,10 +1,10 @@
-# FrictionGlass narrated demo script
+# Friction narrated demo script
 
 Target runtime: 2:10–2:30.
 
 ## 0:00–0:18 — The premise
 
-“WebMCP lets a website publish structured tools from the live page. But how do we know the human interface and agent contract are equally informative, safe, and effective? FrictionGlass tests the same task through human eyes and agent tools.”
+“WebMCP lets a website publish structured tools from the live page. But how do we know the human interface and agent contract are equally informative, safe, and effective? Friction tests the same task through human eyes and agent tools.”
 
 ## 0:18–0:48 — Baseline human run
 
@@ -24,7 +24,7 @@ Show the 50/100 score and two critical findings.
 
 Open the findings, then the patch review.
 
-“FrictionGlass ties every proposal to trace evidence: clearer human wording, itemized result fields, a narrower confirmation schema, and an exact tool description. Agents can propose this patch, but only the visible human interface can approve it. There is no approval tool.”
+“Friction ties every proposal to trace evidence: clearer human wording, itemized result fields, a narrower confirmation schema, and an exact tool description. Agents can propose this patch, but only the visible human interface can approve it. There is no approval tool.”
 
 Approve the patch.
 
@@ -38,4 +38,4 @@ Complete the human run and show 96/100.
 
 ## 2:14–2:25 — Close
 
-“FrictionGlass turns WebMCP itself into a usability test surface—so the agent-native web can be fast without becoming less transparent.”
+“Friction turns WebMCP itself into a usability test surface—so the agent-native web can be fast without becoming less transparent.”

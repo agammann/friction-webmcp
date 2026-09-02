@@ -358,7 +358,7 @@ export function FrictionGlassLab() {
     return [
       {
         name: 'get_test_scenario',
-        description: 'Read the active FrictionGlass event-registration scenario, expected outcome, visible prices, conditions, and parity dimensions. Read-only.',
+        description: 'Read the active Friction event-registration scenario, expected outcome, visible prices, conditions, and parity dimensions. Read-only.',
         annotations: { readOnlyHint: true, untrustedContentHint: false },
         inputSchema: { type: 'object', properties: {}, additionalProperties: false },
         execute: async () => json({ scenario_id: 'relayconf-registration', version: stateRef.current.version, task: 'Register for RelayConf with a quiet-zone reserved seat.', prices: { base: 72, quiet_zone_seat: 10, service_fee: 12, total: 94 }, fee_policy: registrationOutcome.feePolicy, parity_dimensions: ['outcome', 'information', 'consent', 'state', 'effort'] }),
@@ -542,7 +542,7 @@ export function FrictionGlassLab() {
         },
         execute: async ({ change }) => {
           changed((current) => ({ ...current, proposedNotes: [...current.proposedNotes, String(change)] }), 'Agent added a patch proposal for human review');
-          return json({ proposed: true, applied: false, approval_required: 'Human must use the visible FrictionGlass interface.' });
+          return json({ proposed: true, applied: false, approval_required: 'Human must use the visible Friction interface.' });
         },
       },
     ];
@@ -589,7 +589,7 @@ export function FrictionGlassLab() {
           <div className="flex items-center gap-3">
             <span className="brand-mark" aria-hidden="true"><span /><span /></span>
             <div>
-              <p className="text-[15px] font-bold tracking-[-0.035em]">friction<span className="text-signal">Glass</span></p>
+              <p className="text-[15px] font-bold tracking-[-0.035em]">Friction</p>
               <p className="hidden text-[10px] uppercase tracking-[0.18em] text-ink/45 sm:block">Dual usability laboratory</p>
             </div>
           </div>
@@ -723,4 +723,3 @@ export function FrictionGlassLab() {
     </main>
   );
 }
-
