@@ -10,7 +10,7 @@ Test the same task through human eyes and agent tools.
 
 ## Demo video
 
-[Friction — WebMCP Challenge Demo](https://youtu.be/98FaYPaIHOs) — narrated, 2:17
+[Friction — WebMCP Challenge Demo](https://youtu.be/o4SgZ7Q6OOA) — narrated, 2:16
 
 ## Source code
 
