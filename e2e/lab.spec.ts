@@ -67,7 +67,7 @@ test('proposals and findings are visible, validated and persisted', async ({ pag
   await page.getByRole('button', { name: /Findings ·/ }).click();
   await expect(page.getByText('Show the itemized price beside the seat choice.')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Review the fee disclosure' })).toBeVisible();
-  await page.reload(); await page.getByRole('button', { name: /Findings ·/ }).click(); await expect(page.getByText('Show the itemized price beside the seat choice.')).toBeVisible();
+  await page.reload(); await expect(page.getByText('10 WebMCP tools ready')).toBeVisible(); await page.getByRole('button', { name: /Findings ·/ }).click(); await expect(page.getByText('Show the itemized price beside the seat choice.')).toBeVisible();
 });
 test('examples are labeled and cannot mix with recorded runs', async ({ page }) => {
   await setup(page); await page.getByRole('button', { name: 'Load example pair' }).click();
@@ -100,4 +100,15 @@ test('desktop layout shows paired recorded evidence', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 }); await setup(page); await human(page); await agent(page);
   await page.screenshot({ path: '../../outputs/friction-desktop.png', fullPage: true, animations: 'disabled' });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('controls wait for hydration and saved-state restoration', async ({ page }) => {
+  await page.route('**/*', async route => {
+    if (route.request().resourceType() === 'script') await new Promise(resolve => setTimeout(resolve, 800));
+    await route.continue();
+  });
+  await page.goto('/', { waitUntil: 'commit' });
+  await expect(page.getByRole('button', { name: 'Start human run' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Start human run' })).toBeEnabled({ timeout: 15000 });
+  await human(page);
 });

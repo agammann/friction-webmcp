@@ -310,6 +310,7 @@ function FindingCard({ finding }: { finding: Finding }) {
 
 export function FrictionLab() {
   const [state, setState] = useState<LabState>(initialState);
+  const [ready, setReady] = useState(false);
   const stateRef = useRef(state);
   const [view, setView] = useState<'lab' | 'findings' | 'tools'>('lab');
   const [humanDialog, setHumanDialog] = useState(false);
@@ -330,6 +331,7 @@ export function FrictionLab() {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) { const restored = restoreState(raw); stateRef.current = restored; setState(restored); }
     } catch { setStorageWarning('Saved state could not be loaded. A fresh lab is open; export your work before closing.'); }
+    finally { setReady(true); }
   }, []);
   const tools = useMemo(() => createLabTools(() => stateRef.current, next => {
     flushSync(() => commit(() => next, 'Agent updated the lab. See the traces or Findings.'));
@@ -369,7 +371,8 @@ export function FrictionLab() {
     }
   };
   const finishHumanRun = () => {
-    commit(current => completeRun(current, 'human', { confirmed: true }), 'Human registration recorded.');
+    try { commit(current => completeRun(current, 'human', { confirmed: true }), 'Human registration recorded.'); }
+    catch (error) { commit(current => ({ ...current, humanRun: { ...current.humanRun, status: 'cancelled' } }), error instanceof Error ? error.message : 'Start a new run.'); }
     setHumanDialog(false);
   };
   const resetLab = () => { commit(() => initialState, 'Fresh baseline lab opened.'); setHumanDialog(false); setPatchDialog(false); setView('lab'); };
@@ -398,7 +401,7 @@ export function FrictionLab() {
               ['findings', `Findings · ${allFindings.length}`, FileWarning],
               ['tools', `Tools · ${tools.length}`, Wrench],
             ] as const).map(([id, label, Icon]) => (
-              <button key={id} onClick={() => setView(id)} className={`flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${view === id ? 'bg-ink text-paper' : 'text-ink/55 hover:bg-ink/[0.06]'}`}><Icon className="size-3.5" />{label}</button>
+              <button disabled={!ready} key={id} onClick={() => setView(id)} className={`flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${view === id ? 'bg-ink text-paper' : 'text-ink/55 hover:bg-ink/[0.06]'}`}><Icon className="size-3.5" />{label}</button>
             ))}
           </nav>
           <div className="flex items-center gap-2">
@@ -406,7 +409,7 @@ export function FrictionLab() {
               <span className={`size-1.5 rounded-full ${webMcpStatus === 'available' ? 'bg-mint' : webMcpStatus === 'checking' ? 'bg-amber' : 'bg-ink/25'}`} />
               {webMcpStatus === 'available' ? `${tools.length} tools live` : webMcpStatus === 'checking' ? 'Checking WebMCP' : 'Human UI fallback'}
             </Badge>
-            <Button aria-label="Reset lab" variant="outline" size="icon" className="border-ink/15 bg-white/45" onClick={resetLab}><RotateCcw /></Button>
+            <Button disabled={!ready} aria-label="Reset lab" variant="outline" size="icon" className="border-ink/15 bg-white/45" onClick={resetLab}><RotateCcw /></Button>
           </div>
         </div>
       </header>
@@ -415,8 +418,8 @@ export function FrictionLab() {
         <div className="mb-5 rounded-xl border border-ink/15 bg-white/50 p-4 text-sm leading-6">
           <p><strong>A working WebMCP reference lab.</strong> Complete one simulated RelayConf registration through the visual UI and page tools, then compare the recorded evidence. No real booking or payment occurs.</p>
           <p className="mt-2 text-xs">A WebMCP-capable browser agent is needed for a recorded agent run. In other browsers, use the visual flow and clearly labeled example pairs. Runs stay in this browser; exports preserve a copy. Starting a run replaces that side; loading examples or resetting replaces both.</p>
-          <div className="mt-3 flex flex-wrap items-center gap-3"><Button variant="outline" onClick={exportReport}>Export report</Button><a className="underline" href="https://github.com/agammann/friction-webmcp#readme">Guide &amp; source</a><span className="text-xs">{webMcpStatus === 'available' ? '10 WebMCP tools ready' : webMcpStatus === 'checking' ? 'Checking browser tools…' : 'WebMCP unavailable here'}</span></div>
-          <output className="mt-2 block text-xs">{activityMessage}</output>
+          <div className="mt-3 flex flex-wrap items-center gap-3"><Button disabled={!ready} variant="outline" onClick={exportReport}>Export report</Button><a className="underline" href="https://github.com/agammann/friction-webmcp#readme">Guide &amp; source</a><span className="text-xs">{webMcpStatus === 'available' ? '10 WebMCP tools ready' : webMcpStatus === 'checking' ? 'Checking browser tools…' : 'WebMCP unavailable here'}</span></div>
+          <output className="mt-2 block text-xs">{ready ? activityMessage : 'Loading saved lab…'}</output>
           {storageWarning ? <p role="alert" className="mt-2 font-semibold text-signal">{storageWarning}</p> : null}
           {state.humanRun.source === 'example' || state.agentRun.source === 'example' ? <p className="mt-2 font-semibold text-signal">Example data is present. These illustrative events were not recorded from a person or agent.</p> : null}
         </div>
@@ -439,11 +442,11 @@ export function FrictionLab() {
                 </h1>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button className="h-10 rounded-full bg-ink px-4 text-paper hover:bg-ink/85" onClick={() => {
+                <Button disabled={!ready} className="h-10 rounded-full bg-ink px-4 text-paper hover:bg-ink/85" onClick={() => {
                   commit(current => startRun(current, 'human'), 'Human visual run started');
                   setHumanDialog(true);
                 }}><MousePointer2 data-icon="inline-start" /> Start human run</Button>
-                <Button variant="outline" className="h-10 rounded-full border-ink/15 bg-white/50 px-4" onClick={() => commit((current) => replayPairedRun(current), 'Loaded an illustrative example pair; these events were not observed.')}><Play data-icon="inline-start" /> Load example pair</Button>
+                <Button disabled={!ready} variant="outline" className="h-10 rounded-full border-ink/15 bg-white/50 px-4" onClick={() => commit((current) => replayPairedRun(current), 'Loaded an illustrative example pair; these events were not observed.')}><Play data-icon="inline-start" /> Load example pair</Button>
               </div>
             </section>
 
@@ -467,7 +470,7 @@ export function FrictionLab() {
                   <span className="grid size-9 shrink-0 place-items-center rounded-full bg-signal/10 text-signal"><Zap className="size-4" /></span>
                   <div><p className="text-sm font-semibold">Explore a built-in repair, then record a new pair.</p><p className="mt-1 text-xs leading-5 text-ink/50">Review the UI wording, returned fields, and confirmation gate. Applying the patch clears both runs.</p></div>
                 </div>
-                <Button className="mt-4 h-9 shrink-0 bg-signal text-white hover:bg-signal/85 sm:mt-0" onClick={() => setPatchDialog(true)}>Review proposed patch <ArrowRight data-icon="inline-end" /></Button>
+                <Button disabled={!ready} className="mt-4 h-9 shrink-0 bg-signal text-white hover:bg-signal/85 sm:mt-0" onClick={() => setPatchDialog(true)}>Review proposed patch <ArrowRight data-icon="inline-end" /></Button>
               </section>
             ) : null}
           </>
@@ -477,7 +480,7 @@ export function FrictionLab() {
           <section>
             <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
               <div><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-signal">Evidence → repair</p><h1 className="mt-1 text-3xl font-bold tracking-[-0.045em]">Parity findings</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-ink/55">Check results come from the current pair. NOTE entries and text proposals are caller-supplied observations that still need review.</p></div>
-              {!state.patchApproved ? <Button className="bg-signal text-white hover:bg-signal/85" onClick={() => setPatchDialog(true)}><ShieldCheck data-icon="inline-start" /> Review patch</Button> : null}
+              {!state.patchApproved ? <Button disabled={!ready} className="bg-signal text-white hover:bg-signal/85" onClick={() => setPatchDialog(true)}><ShieldCheck data-icon="inline-start" /> Review patch</Button> : null}
             </div>
             {!allFindings.length ? <p className="mb-4 text-sm">No findings yet. Complete a paired run or ask your agent to submit an observation.</p> : null}
             <article className="mb-5 rounded-xl border border-ink/15 p-4"><h2 className="font-semibold">Text proposals awaiting review</h2><p className="mt-1 text-xs">Notes are saved for review. They do not change code or the built-in patch.</p><ol className="mt-3 list-inside list-decimal space-y-2 text-sm">{state.proposedNotes.map((note, index) => <li key={index} className="break-words">{note}</li>)}</ol>{!state.proposedNotes.length ? <p className="mt-2 text-xs">No text proposals submitted.</p> : null}</article>
@@ -514,7 +517,7 @@ export function FrictionLab() {
           ['lab', 'Lab', GitCompareArrows],
           ['findings', 'Findings', FileWarning],
           ['tools', 'Tools', Wrench],
-        ] as const).map(([id, label, Icon]) => <button key={id} onClick={() => setView(id)} className={`flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full text-xs font-medium ${view === id ? 'bg-ink text-paper' : 'text-ink/50'}`}><Icon className="size-3.5" />{label}</button>)}
+        ] as const).map(([id, label, Icon]) => <button disabled={!ready} key={id} onClick={() => setView(id)} className={`flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full text-xs font-medium ${view === id ? 'bg-ink text-paper' : 'text-ink/50'}`}><Icon className="size-3.5" />{label}</button>)}
       </nav>
 
       {humanDialog ? <HumanRunDialog version={state.version} onClose={() => { commit(current => current.humanRun.steps.length >= 200 ? { ...current, humanRun: { ...current.humanRun, status: 'cancelled' } } : record(current, 'human', 'Cancelled visual run', 'Closed before confirmation.', Date.now(), { status: 'cancelled' })); setHumanDialog(false); }} onEvent={humanEvent} onComplete={finishHumanRun} /> : null}
