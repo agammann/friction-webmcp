@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 
 const siteUrl =
@@ -10,7 +9,7 @@ const structuredData = {
   '@type': 'WebApplication',
   name: 'Friction',
   url: siteUrl,
-  description: 'Test the same web task through human eyes and WebMCP agent tools.',
+  description: 'Compare recorded visual and WebMCP journeys for a simulated registration, review evidence, and retest a built-in repair.',
   applicationCategory: 'DeveloperApplication',
   operatingSystem: 'Any modern web browser',
   isAccessibleForFree: true,
@@ -19,30 +18,20 @@ const structuredData = {
   featureList: [
     'Paired human and WebMCP agent traces',
     'Outcome, information, consent, state, and effort parity checks',
-    'Human-only interface patch approval',
+    'Visible interface patch review',
     'Ten page-owned WebMCP tools over shared visible state',
   ],
 };
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-});
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-});
-
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: 'Friction — Human / Agent Parity Lab',
-  description: 'Test the same web task through human eyes and WebMCP agent tools.',
+  description: 'Compare recorded visual and WebMCP journeys for a simulated registration, review evidence, and retest a built-in repair.',
   alternates: { canonical: '/' },
   openGraph: {
     title: 'Friction — Human / Agent Parity Lab',
     description:
-      'Test the same web task through human eyes and WebMCP agent tools.',
+      'Compare recorded visual and WebMCP journeys for a simulated registration, review evidence, and retest a built-in repair.',
     type: 'website',
     images: [{ url: '/og.png', width: 1200, height: 630, alt: 'Friction Human / Agent Parity Lab' }],
   },
@@ -50,7 +39,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Friction — Human / Agent Parity Lab',
     description:
-      'Test the same web task through human eyes and WebMCP agent tools.',
+      'Compare recorded visual and WebMCP journeys for a simulated registration, review evidence, and retest a built-in repair.',
     images: ['/og.png'],
   },
 };
@@ -63,7 +52,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className="antialiased"
       >
         <script
           type="application/ld+json"

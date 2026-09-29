@@ -1,7 +1,8 @@
 'use client';
 /* oxlint-disable react/react-compiler */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import {
   Activity,
   ArrowRight,
@@ -30,39 +31,31 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import {
-  approvePatch,
-  baselineAgentTrace,
-  baselineHumanTrace,
-  completeRepairedAgentDraft,
-  compareRuns,
-  configureAgentDraft,
-  idleTrace,
-  initialState,
-  patchChanges,
-  registrationOutcome,
-  reviewAgentDraft,
-  repairedAgentTrace,
-  repairedHumanTrace,
-  replayPairedRun,
-  startedAgentDraft,
-  type Finding,
-  type LabState,
-  type RunTrace,
-  type TraceStep,
-} from '@/lib/lab-model';
+import { approvePatch, compareRuns, completeRun, configureRun, initialState, observedFindings, patchChanges, record, restoreState, reviewRun, replayPairedRun, startRun, type Finding, type LabState, type RunTrace, type TraceStep } from '@/lib/lab-model';
+import { createLabTools } from '@/lib/lab-tools';
+const STORAGE_KEY = 'friction-lab-v2';
 
-const STORAGE_KEY = 'friction-lab-v1';
+function useModal(onClose: () => void) {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = ref.current;
+    if (!dialog) return;
+    const trigger = document.activeElement;
+    dialog.showModal();
+    return () => { dialog.close(); if (trigger instanceof HTMLElement) queueMicrotask(() => trigger.focus()); };
+  }, []);
+  return { ref, onCancel: (event: React.SyntheticEvent) => { event.preventDefault(); onClose(); } };
+}
 
 const toolCatalog = [
-  ['get_test_scenario', 'Read the task, choices, prices, and conditions.', 'read'],
+  ['get_test_scenario', 'Read the fixed task and advertised prices.', 'read'],
   ['start_agent_run', 'Start a fresh structured agent trace.', 'write'],
   ['inspect_task_state', 'Inspect the shared live registration state.', 'read'],
   ['configure_registration', 'Configure the same registration the human sees.', 'write'],
   ['review_registration', 'Return an itemized review and create a review token.', 'write'],
   ['complete_simulated_task', 'Finalize according to the active interface contract.', 'write'],
-  ['get_human_interaction_trace', 'Read the human journey and usability signals.', 'read'],
-  ['compare_human_agent_runs', 'Calculate the five parity dimensions.', 'read'],
+  ['get_human_interaction_trace', 'Read recorded events, elapsed time, and provenance.', 'read'],
+  ['compare_human_agent_runs', 'Compare recorded outcomes, disclosures, confirmation, and event counts.', 'read'],
   ['submit_parity_finding', 'Record a structured parity finding.', 'write'],
   ['propose_interface_patch', 'Propose a change for visible human review.', 'write'],
 ] as const;
@@ -90,13 +83,13 @@ function TraceLane({ trace }: { trace: RunTrace }) {
           <div className="flex items-center gap-2">
             <h2 className="font-semibold tracking-[-0.02em]">{human ? 'Human journey' : 'Agent journey'}</h2>
             <Badge variant="outline" className="border-ink/15 bg-white/35 text-[10px] uppercase tracking-[0.12em]">
-              {human ? 'Visual UI' : 'WebMCP'}
+              {trace.source === 'example' ? 'Example' : human ? 'Visual UI' : 'WebMCP'}
             </Badge>
           </div>
           <p className="mt-0.5 text-xs text-ink/55">
             {trace.status === 'idle'
               ? 'Waiting for this run'
-              : `${formatDuration(trace.durationSeconds)} · ${trace.steps.length} ${human ? 'actions' : 'tool events'} · ${trace.hesitations} hesitation${trace.hesitations === 1 ? '' : 's'}`}
+              : `${formatDuration(trace.durationSeconds)} · ${trace.steps.length} ${human ? 'actions' : 'tool events'} · ${trace.errors} rejected calls · ${trace.status}`}
           </p>
         </div>
         {trace.status === 'complete' ? <CheckCircle2 className="size-4 text-mint" /> : <Clock3 className="size-4 text-ink/30" />}
@@ -105,7 +98,7 @@ function TraceLane({ trace }: { trace: RunTrace }) {
         {trace.steps.length ? (
           <ol className="divide-y divide-ink/8">
             {trace.steps.map((step, index) => (
-              <li key={`${step.at}-${step.label}`} className="grid grid-cols-[42px_18px_minmax(0,1fr)] gap-2 py-3">
+              <li key={index} className="grid grid-cols-[42px_18px_minmax(0,1fr)] gap-2 py-3">
                 <span className="pt-0.5 font-mono text-[10px] text-ink/45">{step.at}</span>
                 <span className="relative flex justify-center">
                   <span className={`mt-1.5 size-2 rounded-full ${stepTone[step.tone]}`} />
@@ -113,7 +106,7 @@ function TraceLane({ trace }: { trace: RunTrace }) {
                 </span>
                 <div className="min-w-0">
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-medium leading-5">{step.label}</p>
+                    <p className="break-words text-sm font-medium leading-5">{step.label}</p>
                     {step.tool ? <code className="hidden max-w-[150px] truncate rounded bg-ink/[0.05] px-1.5 py-0.5 text-[9px] text-ink/45 sm:block">{step.tool}</code> : null}
                   </div>
                   <p className={`mt-0.5 text-xs leading-4 ${step.tone === 'critical' ? 'font-medium text-signal' : 'text-ink/55'}`}>{step.detail}</p>
@@ -163,14 +156,14 @@ function ScoreCard({ state }: { state: LabState }) {
             </span>
           </div>
         )) : (
-          <p className="rounded-xl border border-dashed border-ink/15 p-3 text-xs leading-5 text-ink/50">Complete both journeys to calculate outcome, information, consent, state, and effort parity.</p>
+          <p className="rounded-xl border border-dashed border-ink/15 p-3 text-xs leading-5 text-ink/50">{report.summary}</p>
         )}
       </div>
       {ready ? (
         <div className={`mt-5 rounded-xl border p-3 ${report.criticalFailures ? 'border-signal/20 bg-signal/[0.06]' : 'border-mint/25 bg-mint/[0.07]'}`}>
           <p className={`flex items-center gap-2 text-xs font-semibold ${report.criticalFailures ? 'text-signal' : 'text-mint'}`}>
             {report.criticalFailures ? <CircleAlert className="size-4" /> : <CheckCircle2 className="size-4" />}
-            {report.criticalFailures ? `${report.criticalFailures} critical failures` : 'Parity gate passed'}
+            {report.criticalFailures ? `${report.criticalFailures} critical failures` : 'Core checks passed'}
           </p>
           <p className="mt-1 text-[11px] leading-4 text-ink/75">{report.summary}</p>
         </div>
@@ -183,18 +176,20 @@ function HumanRunDialog({
   version,
   onClose,
   onComplete,
+  onEvent,
 }: {
   version: LabState['version'];
   onClose: () => void;
   onComplete: () => void;
+  onEvent: (action: string) => void;
 }) {
+  const modal = useModal(onClose);
   const [stage, setStage] = useState(0);
   const [detailsOpen, setDetailsOpen] = useState(version === 'repaired');
   const [quietSeat, setQuietSeat] = useState(false);
   const repaired = version === 'repaired';
   return (
-    <div className="dialog-backdrop" role="presentation">
-      <dialog open className="lab-dialog" aria-labelledby="human-run-title">
+    <dialog {...modal} className="lab-dialog" aria-labelledby="human-run-title">
         <header className="flex items-center justify-between border-b border-ink/10 px-5 py-4">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink/45">RelayConf registration · {repaired ? 'retest' : 'baseline'}</p>
@@ -216,7 +211,7 @@ function HumanRunDialog({
                 <span><strong className="block text-sm">General admission</strong><small className="mt-1 block text-xs text-ink/50">Full conference access</small></span>
                 <span className="font-mono text-sm font-semibold">$72</span>
               </div>
-              <Button className="mt-5 h-10 w-full" onClick={() => setStage(1)}>Continue <ArrowRight data-icon="inline-end" /></Button>
+              <Button className="mt-5 h-10 w-full" onClick={() => { onEvent('ticket'); setStage(1); }}>Continue <ArrowRight data-icon="inline-end" /></Button>
             </div>
           ) : null}
 
@@ -225,20 +220,20 @@ function HumanRunDialog({
               <h3 className="text-sm font-semibold">{repaired ? 'Accessibility & comfort' : 'Attendee details'}</h3>
               <p className="mt-1 text-xs leading-5 text-ink/50">You need a reserved seat in a quiet area for the afternoon sessions.</p>
               {!repaired ? (
-                <button className="mt-4 flex w-full items-center justify-between rounded-xl border border-ink/10 bg-white/40 p-3 text-left text-sm font-medium" onClick={() => setDetailsOpen((value) => !value)}>
+                <button className="mt-4 flex w-full items-center justify-between rounded-xl border border-ink/10 bg-white/40 p-3 text-left text-sm font-medium" aria-expanded={detailsOpen} onClick={() => { onEvent(detailsOpen ? 'collapse' : 'expand'); setDetailsOpen(!detailsOpen); }}>
                   More attendee needs <ChevronDown className={`size-4 transition-transform ${detailsOpen ? 'rotate-180' : ''}`} />
                 </button>
               ) : null}
               {detailsOpen ? (
                 <label className={`mt-3 flex cursor-pointer items-start gap-3 rounded-xl border p-4 ${quietSeat ? 'border-mint bg-mint/[0.06]' : 'border-ink/12 bg-white/50'}`}>
-                  <input className="mt-0.5 size-4 accent-[#28a66a]" type="checkbox" checked={quietSeat} onChange={(event) => setQuietSeat(event.target.checked)} />
+                  <input className="mt-0.5 size-4 accent-[#28a66a]" type="checkbox" checked={quietSeat} onChange={(event) => { onEvent(event.target.checked ? 'seat' : 'unseat'); setQuietSeat(event.target.checked); }} />
                   <span className="flex-1"><strong className="block text-sm">Quiet-zone reserved seat</strong><small className="mt-1 block text-xs text-ink/50">Reserved aisle seat in the low-stimulation section.</small></span>
                   <span className="font-mono text-xs font-semibold">+$10</span>
                 </label>
               ) : (
                 <div className="mt-3 rounded-xl border border-dashed border-ink/12 p-4 text-xs text-ink/40">No visible option matches the task yet.</div>
               )}
-              <Button className="mt-5 h-10 w-full" disabled={!quietSeat} onClick={() => setStage(2)}>Review registration <ArrowRight data-icon="inline-end" /></Button>
+              <Button className="mt-5 h-10 w-full" disabled={!quietSeat} onClick={() => { onEvent('review'); setStage(2); }}>Review registration <ArrowRight data-icon="inline-end" /></Button>
             </div>
           ) : null}
 
@@ -256,16 +251,15 @@ function HumanRunDialog({
             </div>
           ) : null}
         </div>
-      </dialog>
-    </div>
+    </dialog>
   );
 }
 
 function PatchApprovalDialog({ onClose, onApprove }: { onClose: () => void; onApprove: () => void }) {
+  const modal = useModal(onClose);
   const [acknowledged, setAcknowledged] = useState(false);
   return (
-    <div className="dialog-backdrop" role="presentation">
-      <dialog open className="lab-dialog max-w-[620px]" aria-labelledby="patch-title">
+    <dialog {...modal} className="lab-dialog max-w-[620px]" aria-labelledby="patch-title">
         <header className="flex items-center justify-between border-b border-ink/10 px-5 py-4">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-signal">Human approval required</p>
@@ -274,7 +268,7 @@ function PatchApprovalDialog({ onClose, onApprove }: { onClose: () => void; onAp
           <Button aria-label="Close patch review" variant="ghost" size="icon" onClick={onClose}><X /></Button>
         </header>
         <div className="px-5 py-5">
-          <p className="text-sm leading-6 text-ink/60">The agent proposed these changes from the paired evidence. Applying them changes both the visible interface and the WebMCP contract.</p>
+          <p className="text-sm leading-6 text-ink/60">This built-in patch changes the visible interface and WebMCP contract. Applying it clears both current runs. Export your report first to preserve them. Text proposals in Findings are review notes; this button does not implement them.</p>
           <ol className="mt-4 space-y-2">
             {patchChanges.map((change, index) => (
               <li key={change} className="flex gap-3 rounded-xl border border-ink/10 bg-white/45 p-3 text-xs leading-5">
@@ -292,8 +286,7 @@ function PatchApprovalDialog({ onClose, onApprove }: { onClose: () => void; onAp
           </div>
           <p className="mt-4 flex items-center justify-center gap-1.5 text-[10px] text-ink/40"><LockKeyhole className="size-3" /> This approval action is intentionally not available as a WebMCP tool.</p>
         </div>
-      </dialog>
-    </div>
+    </dialog>
   );
 }
 
@@ -305,11 +298,11 @@ function FindingCard({ finding }: { finding: Finding }) {
         <span className="font-mono text-[10px] text-ink/40">{finding.id}</span>
         <span className="ml-auto text-[10px] font-semibold uppercase tracking-[0.12em] text-ink/45">{finding.dimension}</span>
       </div>
-      <h3 className="mt-3 text-base font-semibold tracking-[-0.025em]">{finding.title}</h3>
-      <p className="mt-2 text-xs leading-5 text-ink/55">{finding.evidence}</p>
+      <h3 className="mt-3 break-words text-base font-semibold tracking-[-0.025em]">{finding.title}</h3>
+      <p className="mt-2 break-words text-xs leading-5 text-ink/55">{finding.evidence}</p>
       <div className="mt-3 rounded-xl bg-ink/[0.045] p-3">
         <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-ink/40">Proposed repair</p>
-        <p className="mt-1 text-xs leading-5">{finding.proposal}</p>
+        <p className="mt-1 break-words text-xs leading-5">{finding.proposal}</p>
       </div>
     </article>
   );
@@ -318,273 +311,74 @@ function FindingCard({ finding }: { finding: Finding }) {
 export function FrictionLab() {
   const [state, setState] = useState<LabState>(initialState);
   const stateRef = useRef(state);
-  const commitRef = useRef<(updater: (current: LabState) => LabState, message?: string) => void>(() => undefined);
   const [view, setView] = useState<'lab' | 'findings' | 'tools'>('lab');
   const [humanDialog, setHumanDialog] = useState(false);
   const [patchDialog, setPatchDialog] = useState(false);
   const [webMcpStatus, setWebMcpStatus] = useState<'checking' | 'available' | 'unavailable'>('checking');
-  const [activityMessage, setActivityMessage] = useState('Ready for a paired test');
-
-  useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved) as LabState;
-        stateRef.current = parsed;
-        setState(parsed);
-      }
-    } catch {
-      window.localStorage.removeItem(STORAGE_KEY);
-    }
-  }, []);
-
-  const commit = (updater: (current: LabState) => LabState, message?: string) => {
+  const [activityMessage, setActivityMessage] = useState('Start a human run, then ask your browser agent to run the same task.');
+  const [storageWarning, setStorageWarning] = useState('');
+  const commit = useCallback((updater: (current: LabState) => LabState, message?: string) => {
     const next = updater(stateRef.current);
     stateRef.current = next;
     setState(next);
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     if (message) setActivityMessage(message);
-  };
-  commitRef.current = commit;
-
-  const tools = useMemo<WebMcpTool[]>(() => {
-    const repaired = state.version === 'repaired';
-    const changed = (updater: (current: LabState) => LabState, message: string) => {
-      commitRef.current(updater, message);
-      window.dispatchEvent(new CustomEvent('friction:mutated', { detail: { message } }));
-    };
-    const requireDraft = () => {
-      const draft = stateRef.current.agentDraft;
-      if (!draft.started) throw new Error('Start an agent run before configuring the registration.');
-      return draft;
-    };
-    return [
-      {
-        name: 'get_test_scenario',
-        title: 'Read test scenario',
-        description: 'Read the active Friction event-registration scenario, expected outcome, visible prices, conditions, and parity dimensions. Read-only.',
-        annotations: { readOnlyHint: true, untrustedContentHint: false },
-        inputSchema: { type: 'object', properties: {}, additionalProperties: false },
-        execute: async () => ({ scenario_id: 'relayconf-registration', version: stateRef.current.version, task: 'Register for RelayConf with a quiet-zone reserved seat.', prices: { base: 72, quiet_zone_seat: 10, service_fee: 12, total: 94 }, fee_policy: registrationOutcome.feePolicy, parity_dimensions: ['outcome', 'information', 'consent', 'state', 'effort'] }),
-      },
-      {
-        name: 'start_agent_run',
-        title: 'Start agent run',
-        description: 'Start a fresh structured agent side of the current paired usability test. Mutating: always clears the current agent trace on the visible page.',
-        annotations: { readOnlyHint: false, untrustedContentHint: false },
-        inputSchema: { type: 'object', properties: {}, additionalProperties: false },
-        execute: async () => {
-          changed((current) => ({ ...current, agentRun: { ...idleTrace('agent', current.version), status: 'running', steps: [{ at: '00:00', label: 'Agent run started', detail: `Contract ${current.version}`, tone: 'neutral', tool: 'start_agent_run' }] }, agentDraft: startedAgentDraft() }), 'Agent started a structured run');
-          return { started: true, scenario_id: 'relayconf-registration', version: stateRef.current.version };
-        },
-      },
-      {
-        name: 'inspect_task_state',
-        title: 'Inspect task state',
-        description: 'Inspect the live shared scenario version, paired-run status, patch approval, current agent draft, and final registration state. Read-only.',
-        annotations: { readOnlyHint: true, untrustedContentHint: false },
-        inputSchema: { type: 'object', properties: {}, additionalProperties: false },
-        execute: async () => {
-          const current = stateRef.current;
-          return { version: current.version, patch_approved_by_human: current.patchApproved, human_run: current.humanRun.status, agent_run: current.agentRun.status, agent_draft: current.agentDraft, final_registration: current.agentRun.outcome ?? current.humanRun.outcome ?? null };
-        },
-      },
-      {
-        name: 'configure_registration',
-        title: 'Configure registration',
-        description: 'Configure the simulated RelayConf registration with a typed seat preference. Mutating: updates the agent draft and visible trace, but does not finalize.',
-        annotations: { readOnlyHint: false, untrustedContentHint: false },
-        inputSchema: {
-          type: 'object',
-          properties: {
-            ticket: {
-              type: 'string',
-              enum: ['general_admission'],
-              description: 'Ticket tier to reserve for the simulated registration.',
-            },
-            seat_preference: {
-              type: 'string',
-              enum: ['quiet_zone'],
-              description: 'Requested seating area. The quiet zone has a fee policy that differs by scenario version.',
-            },
-          },
-          required: ['ticket', 'seat_preference'],
-          additionalProperties: false,
-        },
-        execute: async (input) => {
-          requireDraft();
-          if (input.ticket !== 'general_admission' || input.seat_preference !== 'quiet_zone') throw new Error('Use the supported ticket and seat enum values.');
-          changed((current) => ({ ...current, agentDraft: configureAgentDraft(current.agentDraft), agentRun: { ...current.agentRun, steps: [...current.agentRun.steps, { at: '00:03', label: 'Configured registration', detail: 'quiet_zone selected through typed input', tone: 'success', tool: 'configure_registration' }] } }), 'Agent configured the quiet-zone seat');
-          return { configured: true, ticket: 'general_admission', seat_preference: 'quiet_zone', subtotal: 82 };
-        },
-      },
-      {
-        name: 'review_registration',
-        title: 'Review registration',
-        description: 'Review the itemized registration, material fee policy, and total before finalization. Mutating: records the review and issues a one-time review token.',
-        annotations: { readOnlyHint: false, untrustedContentHint: false },
-        inputSchema: { type: 'object', properties: {}, additionalProperties: false },
-        execute: async () => {
-          const reviewToken = `FG-REVIEW-${crypto.randomUUID()}`;
-          changed((current) => ({ ...current, agentDraft: reviewAgentDraft(current.agentDraft, reviewToken), agentRun: { ...current.agentRun, steps: [...current.agentRun.steps, { at: '00:05', label: 'Reviewed total and policy', detail: '$94 total · $12 service fee · one-time review token issued', tone: 'success', tool: 'review_registration' }] } }), 'Agent reviewed the full price and policy');
-          return { base_price: 72, option_price: 10, service_fee: 12, total: 94, fee_policy: registrationOutcome.feePolicy, reviewToken };
-        },
-      },
-      {
-        name: 'complete_simulated_task',
-        title: 'Complete simulated registration',
-        description: repaired
-          ? 'Finalize the simulated registration only after itemized review. Requires the reviewToken issued by review_registration plus confirmed=true. Updates the shared visible registration and agent trace. Returns completed, the full registration including total and fee policy, and the recorded consent status.'
-          : 'Finalize the current simulated registration. Updates the shared visible registration and agent trace. Returns completed, ticket, quiet-zone selection, and the intentionally incomplete baseline subtotal.',
-        annotations: { readOnlyHint: false, untrustedContentHint: false },
-        inputSchema: repaired
-          ? {
-              type: 'object',
-              properties: {
-                reviewToken: {
-                  type: 'string',
-                  minLength: 20,
-                  maxLength: 80,
-                  pattern: '^FG-REVIEW-[0-9a-f-]+$',
-                  description: 'One-time review token issued by review_registration for the current configuration.',
-                },
-                confirmed: {
-                  type: 'boolean',
-                  const: true,
-                  description: 'Explicit confirmation that the reviewed registration should be finalized; must be true.',
-                },
-              },
-              required: ['reviewToken', 'confirmed'],
-              additionalProperties: false,
-            }
-          : { type: 'object', properties: {}, additionalProperties: false },
-        execute: async (input) => {
-          const draft = requireDraft();
-          if (!draft.configured) throw new Error('Configure the registration before completing it.');
-          const completedDraft = repaired
-            ? completeRepairedAgentDraft(draft, input.reviewToken, input.confirmed)
-            : { ...draft, completed: true };
-          changed((current) => ({ ...current, agentRun: current.version === 'repaired' ? repairedAgentTrace : baselineAgentTrace, agentDraft: completedDraft }), repaired ? 'Agent confirmed after the review gate' : 'Agent finalized without the human review gate');
-          return repaired
-            ? { completed: true, registration: registrationOutcome, consent: { reviewed: true, confirmed: true, review_token_consumed: true } }
-            : { completed: true, ticket: 'General admission', quiet_zone_seat: true, subtotal: 82 };
-        },
-      },
-      {
-        name: 'get_human_interaction_trace',
-        title: 'Read human interaction trace',
-        description: 'Read the visible human interaction trace, including steps, duration, backtracks, hesitations, and final outcome. Read-only; free-form human notes would be untrusted.',
-        annotations: { readOnlyHint: true, untrustedContentHint: true },
-        inputSchema: { type: 'object', properties: {}, additionalProperties: false },
-        execute: async () => stateRef.current.humanRun,
-      },
-      {
-        name: 'compare_human_agent_runs',
-        title: 'Compare human and agent runs',
-        description: 'Compare the completed human and agent runs across outcome, information, consent, state, and effort. Read-only and deterministic.',
-        annotations: { readOnlyHint: true, untrustedContentHint: false },
-        inputSchema: { type: 'object', properties: {}, additionalProperties: false },
-        execute: async () => compareRuns(stateRef.current.humanRun, stateRef.current.agentRun),
-      },
-      {
-        name: 'submit_parity_finding',
-        title: 'Submit parity finding',
-        description: 'Record an evidence-backed parity finding for visible human review. Mutating; title, evidence, and proposal are untrusted agent-authored content.',
-        annotations: { readOnlyHint: false, untrustedContentHint: true },
-        inputSchema: {
-          type: 'object',
-          properties: {
-            dimension: {
-              type: 'string',
-              enum: ['Information', 'Consent', 'Human effort'],
-              description: 'Parity dimension affected by the observed difference.',
-            },
-            title: {
-              type: 'string',
-              minLength: 5,
-              maxLength: 120,
-              description: 'Short human-readable name for the parity issue.',
-            },
-            evidence: {
-              type: 'string',
-              minLength: 10,
-              maxLength: 500,
-              description: 'Specific trace evidence showing how the human and agent experiences diverged.',
-            },
-            proposal: {
-              type: 'string',
-              minLength: 10,
-              maxLength: 500,
-              description: 'Concrete interface or WebMCP contract change that would address the finding.',
-            },
-          },
-          required: ['dimension', 'title', 'evidence', 'proposal'],
-          additionalProperties: false,
-        },
-        execute: async (input) => {
-          const custom: Finding = { id: `FG-AGENT-${stateRef.current.customFindings.length + 1}`, severity: 'moderate', dimension: input.dimension as Finding['dimension'], title: String(input.title), evidence: String(input.evidence), proposal: String(input.proposal) };
-          changed((current) => ({ ...current, customFindings: [...current.customFindings, custom] }), `Agent submitted finding ${custom.id}`);
-          return { submitted: true, finding_id: custom.id, approval_status: 'visible_review_only' };
-        },
-      },
-      {
-        name: 'propose_interface_patch',
-        title: 'Propose interface patch',
-        description: 'Propose a concise UI or WebMCP contract change for human review. Mutating: adds an untrusted proposal note. This tool cannot approve or apply patches.',
-        annotations: { readOnlyHint: false, untrustedContentHint: true },
-        inputSchema: {
-          type: 'object',
-          properties: {
-            change: {
-              type: 'string',
-              minLength: 10,
-              maxLength: 500,
-              description: 'Concise description of the proposed UI or WebMCP contract change for human review.',
-            },
-          },
-          required: ['change'],
-          additionalProperties: false,
-        },
-        execute: async ({ change }) => {
-          changed((current) => ({ ...current, proposedNotes: [...current.proposedNotes, String(change)] }), 'Agent added a patch proposal for human review');
-          return { proposed: true, applied: false, approval_required: 'Human must use the visible Friction interface.' };
-        },
-      },
-    ];
-  }, [state.version]);
-
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); setStorageWarning(''); }
+    catch { setStorageWarning('Browser storage is unavailable. This session still works; export before closing.'); }
+  }, []);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) { const restored = restoreState(raw); stateRef.current = restored; setState(restored); }
+    } catch { setStorageWarning('Saved state could not be loaded. A fresh lab is open; export your work before closing.'); }
+  }, []);
+  const tools = useMemo(() => createLabTools(() => stateRef.current, next => {
+    flushSync(() => commit(() => next, 'Agent updated the lab. See the traces or Findings.'));
+  }, Date.now, state.version), [commit, state.version]);
   useEffect(() => {
     const context = document.modelContext ?? navigator.modelContext;
-    if (!context) {
-      setWebMcpStatus('unavailable');
-      return;
-    }
+    if (!context || typeof context.registerTool !== 'function') { setWebMcpStatus('unavailable'); return; }
     const controller = new AbortController();
     setWebMcpStatus('checking');
-    Promise.all(tools.map((tool) => context.registerTool(tool, { signal: controller.signal })))
-      .then(() => {
-        setWebMcpStatus('available');
-        setActivityMessage(`${tools.length} WebMCP tools registered`);
-      })
-      .catch(() => setWebMcpStatus('unavailable'));
+    void (async () => {
+      try {
+        for (const tool of tools) {
+          if (controller.signal.aborted) return;
+          await context.registerTool({ ...tool, execute: async input => {
+            if (controller.signal.aborted) throw new Error('This tool registration expired. Discover tools again.');
+            return tool.execute(input);
+          } }, { signal: controller.signal });
+        }
+        if (!controller.signal.aborted) setWebMcpStatus('available');
+      } catch {
+        if (!controller.signal.aborted) { controller.abort(); setWebMcpStatus('unavailable'); }
+      }
+    })();
     return () => controller.abort();
   }, [tools]);
-
   const report = compareRuns(state.humanRun, state.agentRun);
-  const allFindings = [...state.findings, ...state.customFindings];
+  const allFindings = [...observedFindings(state), ...state.customFindings];
   const repaired = state.version === 'repaired';
-
+  const humanEvent = (action: string) => {
+    try { commit(current => {
+      if (action === 'seat') return configureRun(current, 'human');
+      if (action === 'review') return reviewRun(current, 'human');
+      return record(current, 'human', { ticket: 'Selected ticket', expand: 'Expanded attendee needs', collapse: 'Collapsed attendee needs', unseat: 'Cleared quiet-zone seat' }[action] ?? action, 'Visual interaction recorded.', Date.now(), action === 'unseat' ? { configured: false, reviewed: false, disclosure: undefined } : {});
+    }); } catch (error) {
+      commit(current => ({ ...current, humanRun: { ...current.humanRun, status: 'cancelled' } }), error instanceof Error ? error.message : 'Start a new run.');
+      setHumanDialog(false);
+    }
+  };
   const finishHumanRun = () => {
-    commit((current) => ({ ...current, humanRun: current.version === 'repaired' ? repairedHumanTrace : baselineHumanTrace }), repaired ? 'Human completed the repaired visual flow' : 'Human completed the baseline visual flow');
+    commit(current => completeRun(current, 'human', { confirmed: true }), 'Human registration recorded.');
     setHumanDialog(false);
   };
-
-  const resetLab = () => {
-    stateRef.current = initialState;
-    setState(initialState);
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(initialState));
-    setActivityMessage('Baseline lab restored');
-    setView('lab');
+  const resetLab = () => { commit(() => initialState, 'Fresh baseline lab opened.'); setHumanDialog(false); setPatchDialog(false); setView('lab'); };
+  const exportReport = () => {
+    const { reviewToken: _token, ...snapshot } = stateRef.current;
+    const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), scope: 'Fixed simulated RelayConf task. Local, editable browser evidence; not an independent audit.', report: compareRuns(snapshot.humanRun, snapshot.agentRun), state: snapshot }, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a'); link.href = url; link.download = 'friction-report.json'; link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   return (
@@ -618,9 +412,17 @@ export function FrictionLab() {
       </header>
 
       <div className="mx-auto max-w-[1480px] px-4 pt-5 sm:px-6 lg:px-8 lg:pt-7">
+        <div className="mb-5 rounded-xl border border-ink/15 bg-white/50 p-4 text-sm leading-6">
+          <p><strong>A working WebMCP reference lab.</strong> Complete one simulated RelayConf registration through the visual UI and page tools, then compare the recorded evidence. No real booking or payment occurs.</p>
+          <p className="mt-2 text-xs">A WebMCP-capable browser agent is needed for a recorded agent run. In other browsers, use the visual flow and clearly labeled example pairs. Runs stay in this browser; exports preserve a copy. Starting a run replaces that side; loading examples or resetting replaces both.</p>
+          <div className="mt-3 flex flex-wrap items-center gap-3"><Button variant="outline" onClick={exportReport}>Export report</Button><a className="underline" href="https://github.com/agammann/friction-webmcp#readme">Guide &amp; source</a><span className="text-xs">{webMcpStatus === 'available' ? '10 WebMCP tools ready' : webMcpStatus === 'checking' ? 'Checking browser tools…' : 'WebMCP unavailable here'}</span></div>
+          <output className="mt-2 block text-xs">{activityMessage}</output>
+          {storageWarning ? <p role="alert" className="mt-2 font-semibold text-signal">{storageWarning}</p> : null}
+          {state.humanRun.source === 'example' || state.agentRun.source === 'example' ? <p className="mt-2 font-semibold text-signal">Example data is present. These illustrative events were not recorded from a person or agent.</p> : null}
+        </div>
         {state.patchApproved ? (
           <div className="mb-5 flex flex-col gap-3 rounded-[16px] border border-mint/25 bg-mint/[0.08] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="flex items-center gap-2 text-xs"><ShieldCheck className="size-4 text-mint" /><strong>Human-approved patch active.</strong><span className="text-ink/50">The visual UI and WebMCP contract now use the repaired version.</span></p>
+            <p className="flex items-center gap-2 text-xs"><ShieldCheck className="size-4 text-mint" /><strong>Approved patch active.</strong><span className="text-ink/50">The visual UI and WebMCP contract now use the repaired version.</span></p>
             <span className="font-mono text-[10px] text-ink/45">FG-PATCH-01 · {state.patchApprovedAt}</span>
           </div>
         ) : null}
@@ -638,10 +440,10 @@ export function FrictionLab() {
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button className="h-10 rounded-full bg-ink px-4 text-paper hover:bg-ink/85" onClick={() => {
-                  commit((current) => ({ ...current, humanRun: idleTrace('human', current.version) }), 'Human visual run started');
+                  commit(current => startRun(current, 'human'), 'Human visual run started');
                   setHumanDialog(true);
                 }}><MousePointer2 data-icon="inline-start" /> Start human run</Button>
-                <Button variant="outline" className="h-10 rounded-full border-ink/15 bg-white/50 px-4" onClick={() => commit((current) => replayPairedRun(current), `Replayed the ${state.version} paired run`)}><Play data-icon="inline-start" /> Replay paired run</Button>
+                <Button variant="outline" className="h-10 rounded-full border-ink/15 bg-white/50 px-4" onClick={() => commit((current) => replayPairedRun(current), 'Loaded an illustrative example pair; these events were not observed.')}><Play data-icon="inline-start" /> Load example pair</Button>
               </div>
             </section>
 
@@ -663,7 +465,7 @@ export function FrictionLab() {
               <section className="mt-5 rounded-[18px] border border-signal/20 bg-white/45 p-4 sm:flex sm:items-center sm:justify-between sm:gap-6">
                 <div className="flex items-start gap-3">
                   <span className="grid size-9 shrink-0 place-items-center rounded-full bg-signal/10 text-signal"><Zap className="size-4" /></span>
-                  <div><p className="text-sm font-semibold">The paired evidence produced a four-part repair.</p><p className="mt-1 text-xs leading-5 text-ink/50">Review the proposed UI wording, result fields, schema, and confirmation gate. Only a person can approve the patch.</p></div>
+                  <div><p className="text-sm font-semibold">Explore a built-in repair, then record a new pair.</p><p className="mt-1 text-xs leading-5 text-ink/50">Review the UI wording, returned fields, and confirmation gate. Applying the patch clears both runs.</p></div>
                 </div>
                 <Button className="mt-4 h-9 shrink-0 bg-signal text-white hover:bg-signal/85 sm:mt-0" onClick={() => setPatchDialog(true)}>Review proposed patch <ArrowRight data-icon="inline-end" /></Button>
               </section>
@@ -674,13 +476,15 @@ export function FrictionLab() {
         {view === 'findings' ? (
           <section>
             <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-              <div><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-signal">Evidence → repair</p><h1 className="mt-1 text-3xl font-bold tracking-[-0.045em]">Parity findings</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-ink/55">Every proposal is tied to an observed difference between the two journeys—never an opaque confidence score.</p></div>
+              <div><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-signal">Evidence → repair</p><h1 className="mt-1 text-3xl font-bold tracking-[-0.045em]">Parity findings</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-ink/55">Check results come from the current pair. NOTE entries and text proposals are caller-supplied observations that still need review.</p></div>
               {!state.patchApproved ? <Button className="bg-signal text-white hover:bg-signal/85" onClick={() => setPatchDialog(true)}><ShieldCheck data-icon="inline-start" /> Review patch</Button> : null}
             </div>
+            {!allFindings.length ? <p className="mb-4 text-sm">No findings yet. Complete a paired run or ask your agent to submit an observation.</p> : null}
+            <article className="mb-5 rounded-xl border border-ink/15 p-4"><h2 className="font-semibold">Text proposals awaiting review</h2><p className="mt-1 text-xs">Notes are saved for review. They do not change code or the built-in patch.</p><ol className="mt-3 list-inside list-decimal space-y-2 text-sm">{state.proposedNotes.map((note, index) => <li key={index} className="break-words">{note}</li>)}</ol>{!state.proposedNotes.length ? <p className="mt-2 text-xs">No text proposals submitted.</p> : null}</article>
             <div className="grid gap-4 lg:grid-cols-3">{allFindings.map((finding) => <FindingCard key={finding.id} finding={finding} />)}</div>
             <div className="mt-5 grid gap-4 lg:grid-cols-[1.1fr_.9fr]">
               <article className="glass-panel rounded-[18px] p-5"><p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-ink/40">Patch FG-PATCH-01</p><h2 className="mt-2 text-xl font-semibold tracking-[-0.035em]">One repair, both interfaces</h2><ol className="mt-4 grid gap-2 sm:grid-cols-2">{patchChanges.map((change, index) => <li key={change} className="flex gap-3 rounded-xl bg-ink/[0.045] p-3 text-xs leading-5"><span className="font-mono text-signal">0{index + 1}</span>{change}</li>)}</ol></article>
-              <article className="rounded-[18px] bg-ink p-5 text-paper"><LockKeyhole className="size-5 text-amber" /><h2 className="mt-3 text-xl font-semibold tracking-[-0.035em]">Approval remains human.</h2><p className="mt-2 text-sm leading-6 text-paper/60">Agents can submit findings and propose changes. They cannot call an approval tool, activate a patch, or weaken the review gate.</p><p className="mt-5 font-mono text-[10px] uppercase tracking-[0.14em] text-paper/35">No approve_patch tool is registered</p></article>
+              <article className="rounded-[18px] bg-ink p-5 text-paper"><LockKeyhole className="size-5 text-amber" /><h2 className="mt-3 text-xl font-semibold tracking-[-0.035em]">Approval is a visible UI action.</h2><p className="mt-2 text-sm leading-6 text-paper/60">WebMCP exposes findings and proposals, but no approval tool. The checkbox activates a fixed built-in patch; it is not authentication or protection against browser automation.</p><p className="mt-5 font-mono text-[10px] uppercase tracking-[0.14em] text-paper/35">No approve_patch tool is registered</p></article>
             </div>
           </section>
         ) : null}
@@ -692,22 +496,17 @@ export function FrictionLab() {
               {toolCatalog.map(([name, description, mode], index) => (
                 <article key={name} className="glass-panel flex items-start gap-4 rounded-[16px] p-4">
                   <span className="grid size-8 shrink-0 place-items-center rounded-full bg-ink font-mono text-[10px] text-paper">{String(index + 1).padStart(2, '0')}</span>
-                  <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><code className="text-xs font-semibold text-signal">{name}</code><Badge variant="outline" className={mode === 'read' ? 'border-mint/25 bg-mint/[0.07] text-mint' : 'border-amber/30 bg-amber/[0.09] text-ink'}>{mode}</Badge></div><p className="mt-2 text-xs leading-5 text-ink/55">{description}</p></div>
+                  <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><code className="break-all text-xs font-semibold text-signal">{name}</code><Badge variant="outline" className={mode === 'read' ? 'border-mint/25 bg-mint/[0.07] text-mint' : 'border-amber/30 bg-amber/[0.09] text-ink'}>{mode}</Badge></div><p className="mt-2 text-xs leading-5 text-ink/55">{description}</p></div>
                 </article>
               ))}
             </div>
             <div className="mt-5 grid gap-4 lg:grid-cols-3">
               <article className="rounded-[16px] border border-ink/10 bg-white/45 p-4"><ListChecks className="size-4 text-mint" /><h2 className="mt-2 text-sm font-semibold">Typed schemas</h2><p className="mt-1 text-xs leading-5 text-ink/50">Enums and runtime checks constrain tickets, seats, findings, and final confirmation.</p></article>
-              <article className="rounded-[16px] border border-ink/10 bg-white/45 p-4"><Activity className="size-4 text-mint" /><h2 className="mt-2 text-sm font-semibold">Same visible state</h2><p className="mt-1 text-xs leading-5 text-ink/50">Tool mutations update these traces, the score, findings, and durable browser state.</p></article>
+              <article className="rounded-[16px] border border-ink/10 bg-white/45 p-4"><Activity className="size-4 text-mint" /><h2 className="mt-2 text-sm font-semibold">Same in-page state</h2><p className="mt-1 text-xs leading-5 text-ink/50">Tool mutations update these traces, the score, findings, and optional browser storage.</p></article>
               <article className="rounded-[16px] border border-ink/10 bg-white/45 p-4"><ShieldCheck className="size-4 text-mint" /><h2 className="mt-2 text-sm font-semibold">Lifecycle-safe</h2><p className="mt-1 text-xs leading-5 text-ink/50">Tools are feature-detected, registered with cancellation, and remain optional for ordinary browsers.</p></article>
             </div>
           </section>
         ) : null}
-      </div>
-
-      <div className="fixed bottom-4 right-4 z-20 hidden max-w-[360px] items-center gap-3 rounded-full border border-ink/10 bg-paper/95 px-3 py-2 shadow-[0_12px_34px_rgb(23_32_27/14%)] backdrop-blur-xl sm:flex" aria-live="polite">
-        <span className={`grid size-7 place-items-center rounded-full ${webMcpStatus === 'available' ? 'bg-mint text-white' : 'bg-ink text-paper'}`}><Bot className="size-3.5" /></span>
-        <div><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-ink/40">Agent activity</p><p className="max-w-[260px] truncate text-xs">{activityMessage}</p></div>
       </div>
 
       <nav className="fixed inset-x-3 bottom-3 z-30 flex items-center justify-around rounded-full border border-ink/10 bg-paper/95 p-1 shadow-xl backdrop-blur-xl md:hidden" aria-label="Lab sections">
@@ -718,9 +517,9 @@ export function FrictionLab() {
         ] as const).map(([id, label, Icon]) => <button key={id} onClick={() => setView(id)} className={`flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full text-xs font-medium ${view === id ? 'bg-ink text-paper' : 'text-ink/50'}`}><Icon className="size-3.5" />{label}</button>)}
       </nav>
 
-      {humanDialog ? <HumanRunDialog version={state.version} onClose={() => setHumanDialog(false)} onComplete={finishHumanRun} /> : null}
+      {humanDialog ? <HumanRunDialog version={state.version} onClose={() => { commit(current => current.humanRun.steps.length >= 200 ? { ...current, humanRun: { ...current.humanRun, status: 'cancelled' } } : record(current, 'human', 'Cancelled visual run', 'Closed before confirmation.', Date.now(), { status: 'cancelled' })); setHumanDialog(false); }} onEvent={humanEvent} onComplete={finishHumanRun} /> : null}
       {patchDialog ? <PatchApprovalDialog onClose={() => setPatchDialog(false)} onApprove={() => {
-        const stamp = new Date().toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        const stamp = new Date().toISOString();
         commit((current) => approvePatch(current, stamp), 'Human approved and applied FG-PATCH-01');
         setPatchDialog(false);
         setView('lab');

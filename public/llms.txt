@@ -1,42 +1,12 @@
 # Friction
 
-> Friction is a dual usability laboratory for testing the same task through a visible human interface and page-owned WebMCP agent tools.
+Public app: https://friction.alx21.chatgpt.site/
+Source and usage: https://github.com/agammann/friction-webmcp#readme
 
-## Product
+Friction records visual and page-side WebMCP journeys for one fixed, simulated RelayConf registration. No real booking or payment occurs. The baseline intentionally omits a confirmation requirement and full completion price. A visible approval workflow activates a fixed repair and clears the traces for retesting.
 
-- Live app: https://friction.alx21.chatgpt.site/
-- Source: https://github.com/agammann/friction-webmcp
-- License: MIT
-- Scenario: RelayConf event registration
-- Parity dimensions: outcome, information, consent, state, and effort
+Ten tools: get_test_scenario, start_agent_run, inspect_task_state, configure_registration, review_registration, complete_simulated_task, get_human_interaction_trace, compare_human_agent_runs, submit_parity_finding, propose_interface_patch.
 
-## WebMCP tools
+Start with get_test_scenario({}). Configure ticket=general_admission and seat=quiet_zone. Repaired completion requires the current reviewToken returned by review_registration plus confirmed=true. There is no remote MCP endpoint or approval tool. Proposals are visible text notes; they do not execute code.
 
-The top-level page registers ten imperative tools over the same visible browser state:
-
-- get_test_scenario: read the active task, prices, conditions, and expected outcome
-- start_agent_run: start a fresh structured agent trace
-- inspect_task_state: read the shared scenario, draft, approval, and completion state
-- configure_registration: select the supported ticket and quiet-zone seat
-- review_registration: return the itemized total and issue a one-time review token
-- complete_simulated_task: require the current review token and confirmed=true before completion
-- get_human_interaction_trace: read the visible human journey and usability signals
-- compare_human_agent_runs: compare outcome, information, consent, state, and effort
-- submit_parity_finding: add an evidence-backed finding for visible human review
-- propose_interface_patch: propose a change without approving or applying it
-
-## Repaired workflow example
-
-1. Call start_agent_run with an empty object.
-2. Call configure_registration with ticket="general_admission" and seat_preference="quiet_zone".
-3. Call review_registration and retain the returned one-time reviewToken.
-4. Call complete_simulated_task with that reviewToken and confirmed=true.
-5. Call compare_human_agent_runs to inspect the parity result.
-
-## Safety boundary
-
-Agents can submit findings and propose interface changes. Patch approval is deliberately available only through the visible human interface and is not exposed as a WebMCP tool.
-
-## Updates
-
-The live app and repository are the authoritative sources for current behavior.
+Reports distinguish actual recorded events from labeled synthetic examples. The comparison checks records, disclosures, review, confirmation, and action counts. Action balance is a heuristic, not a usability certification. Export local JSON to preserve runs before replacing them. State uses optional browser storage and is not independently verified audit evidence.
