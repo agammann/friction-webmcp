@@ -24,7 +24,9 @@ Without a compatible agent, the complete visual workflow still works. **Load exa
 
 ## WebMCP contract
 
-The page registers ten tools with `document.modelContext.registerTool`, with a compatibility fallback to `navigator.modelContext`. Registration uses an abort signal and is replaced when the interface contract changes. Input schemas and handler validation enforce the same accepted fields. Ordinary browsers display an explicit unavailable status.
+After restoring saved state, the page registers ten titled tools with `document.modelContext.registerTool`, with a compatibility fallback to `navigator.modelContext`. Registration uses an abort signal, disconnects on page hide, returns after cached navigation, and is replaced when the interface contract changes. Returned lab content is marked as untrusted. Input schemas and handler validation enforce the same accepted fields. Ordinary browsers display an explicit unavailable status.
+
+WebMCP is experimental. In Chrome, enable **WebMCP for testing** at `chrome://flags/#enable-webmcp-testing` and relaunch, following the [Chrome setup guide](https://developer.chrome.com/docs/ai/webmcp). Your browser agent must support page-tool discovery and invocation. The flag exposes the API; it does not connect an agent by itself.
 
 | Tool | Purpose |
 | --- | --- |
@@ -49,7 +51,7 @@ complete_simulated_task({"reviewToken":"<token from the latest review>","confirm
 compare_human_agent_runs({})
 ```
 
-Tokens are invalidated by another review, reconfiguration, restarting, patch activation, or completion. Completion cannot be repeated. Review previews have `confirmed: false`; only completed records have `confirmed: true`. Rejected configure/review/completion calls during a running trace are recorded, including their errors. Read-only tool calls are not counted as workflow events.
+Tokens are invalidated by another review, reconfiguration, restarting, patch activation, or completion. Completion cannot be repeated. Review previews have `confirmed: false`; only completed records have `confirmed: true`. Rejected configure/review/completion calls that reach the handler during a running trace are recorded, including their errors. A browser may reject invalid schema input before the handler runs; those refusals do not produce lab events. Read-only tool calls are not counted as workflow events.
 
 Findings require `severity` (`critical` or `moderate`), `dimension` (`Information`, `Consent`, or `Human effort`), `title` (5–160 characters), `evidence` (10–600), and `proposal` (10–600). Text proposals require `change` (10–500). Whitespace-only values and unexpected fields are rejected. Each collection is limited to 30 entries; traces are limited to 200 events. Export and reset/start a new run at the limit.
 
@@ -80,6 +82,8 @@ The previous `friction-lab-v1` snapshot is ignored because its traces used a dif
 Use Node.js 24+ and pnpm 11.19.0:
 
 ```sh
+git clone https://github.com/agammann/friction-webmcp.git
+cd friction-webmcp
 pnpm install --frozen-lockfile
 pnpm dev
 ```
@@ -90,15 +94,36 @@ Open the URL printed by the development server (normally `http://localhost:3000`
 pnpm test
 pnpm lint
 pnpm typecheck
+pnpm audit
 pnpm exec playwright install chromium
-pnpm test:e2e
+pnpm exec playwright install chrome
 pnpm build
+pnpm test:e2e
+pnpm test:webmcp
 pnpm start
 ```
 
-For Linux CI, use `pnpm exec playwright install --with-deps chromium`. `pnpm start` serves the built Worker through Wrangler. No API keys, database, or paid provider account are needed for local use.
+Run the browser suites sequentially because their Wrangler processes share local storage. The ordinary suite uses port 3012; native tests use 3017. Stop a manually started Worker on either port before running its suite. For Linux CI, add `--with-deps` to each browser installation. `pnpm start` serves the built Worker through Wrangler. No API keys, database, or paid provider account are needed for local use.
 
-`lib/lab-model.ts` owns state transitions and comparison; `lib/lab-tools.ts` owns runtime validation and the ten handlers; `components/friction-lab.tsx` renders the same state. Browser tests use a registration adapter to exercise the real handlers and visible UI; this adapter is test-only and is not a claim of native browser support. GitHub Actions runs unit tests, lint, type checking, browser tests, and the production build.
+`lib/lab-model.ts` owns state transitions and comparison; `lib/lab-tools.ts` owns runtime validation and the ten handlers; `components/friction-lab.tsx` renders the same state. Both browser suites run the production Worker. Ordinary tests use a registration adapter to exercise the handlers and visible UI. The native suite calls the actual browser discovery and execution API without an adapter. GitHub Actions runs the audit, unit tests, lint, type checking, production build and both browser suites, and retains the native JSON report on every run.
+
+## Native verification
+
+Five native tests check ten titled schemas before and after patch approval; actual baseline and repaired human/agent pairs; current, invalidated and consumed review tokens; exports, notes and reload persistence; storage failures and malformed snapshots; and withdrawal/restoration through real back/forward caching. Tests use isolated browser contexts, so they do not alter an existing lab tab. There are no server-side run writes.
+
+The complete local suite passed on Windows with Chrome **154.0.8037.93** and Edge **154.0.4258.48**, with the experimental `WebMCP` feature enabled. These are tested versions, not a claim about every browser or agent. In PowerShell, run Edge or the live site with:
+
+```powershell
+$env:FRICTION_WEBMCP_CHANNEL = 'msedge'
+pnpm test:webmcp
+Remove-Item Env:FRICTION_WEBMCP_CHANNEL
+
+$env:FRICTION_WEBMCP_URL = 'https://friction.alx21.chatgpt.site'
+pnpm test:webmcp
+Remove-Item Env:FRICTION_WEBMCP_URL
+```
+
+Live mode runs all five tests in fresh isolated contexts. It records whether the host restores a cached page; local tests require actual restoration. Read the JSON report and check CI for the exact source being published.
 
 ## License
 

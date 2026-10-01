@@ -1,5 +1,17 @@
 import { compareRuns, completeRun, configureRun, record, registrationOutcome, reviewRun, startRun, type LabState, type Finding } from './lab-model.ts';
-export type LabTool = { name: string; description: string; inputSchema: Record<string, unknown>; annotations: { readOnlyHint: boolean }; execute: (input: Record<string, unknown>) => Promise<unknown> };
+export type LabTool = { name: string; title: string; description: string; inputSchema: Record<string, unknown>; annotations: { readOnlyHint: boolean; untrustedContentHint: boolean }; execute: (input: Record<string, unknown>) => Promise<unknown> };
+const titles: Record<string, string> = {
+  get_test_scenario: 'Read test scenario',
+  start_agent_run: 'Start agent run',
+  inspect_task_state: 'Inspect task state',
+  configure_registration: 'Configure registration',
+  review_registration: 'Review registration',
+  complete_simulated_task: 'Complete simulated registration',
+  get_human_interaction_trace: 'Read human interaction trace',
+  compare_human_agent_runs: 'Compare human and agent runs',
+  submit_parity_finding: 'Submit parity finding',
+  propose_interface_patch: 'Propose interface patch',
+};
 const string = (minLength: number, maxLength: number) => ({ type: 'string', minLength, maxLength });
 const choices = (...values: string[]) => ({ type: 'string', enum: values });
 const object = (properties: Record<string, unknown> = {}) => ({ type: 'object', properties, required: Object.keys(properties), additionalProperties: false });
@@ -17,7 +29,7 @@ function validate(input: unknown, schema: ReturnType<typeof object>): Record<str
 export function createLabTools(get: () => LabState, commit: (state: LabState) => void, now = Date.now, version = get().version): LabTool[] {
   const make = (name: string, description: string, properties: Record<string, unknown>, readOnly: boolean, execute: (input: Record<string, unknown>) => unknown): LabTool => {
     const schema = object(properties);
-    return { name, description, inputSchema: schema, annotations: { readOnlyHint: readOnly }, execute: async input => {
+    return { name, title: titles[name], description, inputSchema: schema, annotations: { readOnlyHint: readOnly, untrustedContentHint: true }, execute: async input => {
       if (get().version !== version) throw new Error('The interface changed. Discover the current tools and retry.');
       try { return execute(validate(input, schema)); }
       catch (error) {
