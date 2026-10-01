@@ -337,26 +337,44 @@ export function FrictionLab() {
     flushSync(() => commit(() => next, 'Agent updated the lab. See the traces or Findings.'));
   }, Date.now, state.version), [commit, state.version]);
   useEffect(() => {
+    if (!ready) return;
     const context = document.modelContext ?? navigator.modelContext;
     if (!context || typeof context.registerTool !== 'function') { setWebMcpStatus('unavailable'); return; }
-    const controller = new AbortController();
-    setWebMcpStatus('checking');
-    void (async () => {
-      try {
-        for (const tool of tools) {
-          if (controller.signal.aborted) return;
-          await context.registerTool({ ...tool, execute: async input => {
-            if (controller.signal.aborted) throw new Error('This tool registration expired. Discover tools again.');
-            return tool.execute(input);
-          } }, { signal: controller.signal });
+    let active = true;
+    let controller: AbortController | null = null;
+    const register = () => {
+      if (!active) return;
+      controller?.abort();
+      const current = new AbortController();
+      controller = current;
+      setWebMcpStatus('checking');
+      void (async () => {
+        try {
+          for (const tool of tools) {
+            if (!active || current.signal.aborted) return;
+            await context.registerTool({ ...tool, execute: async input => {
+              if (current.signal.aborted) throw new Error('This tool registration expired. Discover tools again.');
+              return tool.execute(input);
+            } }, { signal: current.signal });
+          }
+          if (active && !current.signal.aborted) setWebMcpStatus('available');
+        } catch {
+          if (active && !current.signal.aborted) { current.abort(); setWebMcpStatus('unavailable'); }
         }
-        if (!controller.signal.aborted) setWebMcpStatus('available');
-      } catch {
-        if (!controller.signal.aborted) { controller.abort(); setWebMcpStatus('unavailable'); }
-      }
-    })();
-    return () => controller.abort();
-  }, [tools]);
+      })();
+    };
+    const hide = () => { controller?.abort(); setWebMcpStatus('checking'); };
+    const show = (event: PageTransitionEvent) => { if (event.persisted) register(); };
+    window.addEventListener('pagehide', hide);
+    window.addEventListener('pageshow', show);
+    register();
+    return () => {
+      active = false;
+      controller?.abort();
+      window.removeEventListener('pagehide', hide);
+      window.removeEventListener('pageshow', show);
+    };
+  }, [tools, ready]);
   const report = compareRuns(state.humanRun, state.agentRun);
   const allFindings = [...observedFindings(state), ...state.customFindings];
   const repaired = state.version === 'repaired';
