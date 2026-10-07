@@ -25,4 +25,4 @@ The old `friction-lab-v1` snapshot is ignored because its traces used a differen
 
 Ordinary browsers support the visual flow and labeled examples. Recorded agent runs require the actual experimental browser WebMCP API and a client that discovers the open page's tools. The browser flag alone does not attach an agent. The ten tools register after state restoration, withdraw on page hide and return after supported cached navigation.
 
-The full raw audit retains the explicitly accepted, unpatched high-severity production dependency finding documented in [SECURITY.md](../SECURITY.md). The required strict policy verifies only that exact finding after live advisory and registry checks. Changed findings, malformed or unavailable verification metadata and newly available patches block publication. This is not a zero-finding audit. Hosted acceptance remains a separate check.
+Hosted acceptance remains a separate check.

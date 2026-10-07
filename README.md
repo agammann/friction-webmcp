@@ -2,9 +2,9 @@
 
 **A working browser lab for comparing a visual workflow with WebMCP tools.** Complete a simulated conference registration, inspect what each interface disclosed and required, and retest after applying a built-in repair.
 
-[Open Friction](https://friction.alx21.chatgpt.site/) · [Source](https://github.com/agammann/friction-webmcp)
+[Open Friction](https://friction.alx21.chatgpt.site/) Â· [Source](https://github.com/agammann/friction-webmcp)
 
-Source **1.1.1** provides this bounded v1 lab. Available dependency patches are applied. The full raw audit retains one explicitly accepted, unpatched high-severity production dependency finding; the required strict policy verifies only that exact finding and current patch availability. See [dependency status](SECURITY.md#dependency-release-gate) and [upgrade and recovery guidance](docs/STABILITY.md).
+Source **1.1.1** provides this bounded v1 lab with available dependency patches applied. See [upgrade and recovery guidance](docs/STABILITY.md).
 
 ## What it does
 
@@ -55,7 +55,7 @@ compare_human_agent_runs({})
 
 Tokens are invalidated by another review, reconfiguration, restarting, patch activation, or completion. Completion cannot be repeated. Review previews have `confirmed: false`; only completed records have `confirmed: true`. Rejected configure/review/completion calls that reach the handler during a running trace are recorded, including their errors. A browser may reject invalid schema input before the handler runs; those refusals do not produce lab events. Read-only tool calls are not counted as workflow events.
 
-Findings require `severity` (`critical` or `moderate`), `dimension` (`Information`, `Consent`, or `Human effort`), `title` (5–160 characters), `evidence` (10–600), and `proposal` (10–600). Text proposals require `change` (10–500). Whitespace-only values and unexpected fields are rejected. Each collection is limited to 30 entries; traces are limited to 200 events. Export and reset/start a new run at the limit.
+Findings require `severity` (`critical` or `moderate`), `dimension` (`Information`, `Consent`, or `Human effort`), `title` (5â€“160 characters), `evidence` (10â€“600), and `proposal` (10â€“600). Text proposals require `change` (10â€“500). Whitespace-only values and unexpected fields are rejected. Each collection is limited to 30 entries; traces are limited to 200 events. Export and reset/start a new run at the limit.
 
 No approval tool is registered. The visible checkbox activates only the fixed patch FG-PATCH-01. It is a workflow boundary, not authentication or a guarantee that browser automation cannot operate the UI. Submitted findings and proposals are unverified notes and are shown as such.
 
@@ -67,7 +67,7 @@ A score is available only when both runs are complete, use the same version, and
 - **Information:** each side received the full itemized price and policy through review or completion (0 or 100). Reading the inspector alone is not counted as reviewing a draft.
 - **Consent:** both sides reviewed and explicitly confirmed (0 or 100).
 - **State:** both in-page final records match (0 or 100). This does not claim durable server storage.
-- **Action balance:** `round(100 × smaller event count / larger event count)`, with a display threshold of 75. Counts include recorded UI actions, mutating registration calls, and rejected calls. They are a simple count heuristic, not equivalent units of human and agent effort.
+- **Action balance:** `round(100 Ã— smaller event count / larger event count)`, with a display threshold of 75. Counts include recorded UI actions, mutating registration calls, and rejected calls. They are a simple count heuristic, not equivalent units of human and agent effort.
 
 The displayed total is the rounded average. Core failures count the first four checks; action balance is separate. Elapsed time is measured from start to the last event, includes waiting/background time, and does not affect the score. Friction does not infer hesitation, confusion, or backtracking from a clock. The score is never selected from the baseline/repaired label.
 
@@ -137,4 +137,4 @@ Live mode runs all five tests in fresh isolated contexts. It records whether the
 
 MIT. See [LICENSE](LICENSE).
 
-The source distribution is made from a clean committed tree. CI verifies every source byte after extraction and runs both browser suites from that fresh copy. Only a verified main push can publish its same-run artifact. The full raw dependency audit remains required and currently exits 1 for the accepted high-severity production dependency finding. `pnpm security:audit` retains that report, verifies the exact documented exception and fails on changed findings, unavailable or malformed metadata and possible newly published patches. This is not a zero-finding audit. See [CONTRIBUTING.md](CONTRIBUTING.md).
+The source distribution is made from a clean committed tree. CI verifies every source byte after extraction and runs both browser suites from that fresh copy. Only a verified main push can publish its same-run artifact. CI retains dependency audit reports. See [CONTRIBUTING.md](CONTRIBUTING.md).
