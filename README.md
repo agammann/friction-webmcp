@@ -4,6 +4,8 @@
 
 [Open Friction](https://friction.alx21.chatgpt.site/) · [Source](https://github.com/agammann/friction-webmcp)
 
+Source **1.1.1** provides this bounded v1 lab. Available dependency patches are applied. The full raw audit retains one explicitly accepted, unpatched high-severity production dependency finding; the required strict policy verifies only that exact finding and current patch availability. See [dependency status](SECURITY.md#dependency-release-gate) and [upgrade and recovery guidance](docs/STABILITY.md).
+
 ## What it does
 
 Friction records actual UI and tool events for one fixed task: choose General admission and a quiet-zone reserved seat at the fictional RelayConf. The itemized total is $94 ($72 ticket, $10 seat, $12 service fee). No real booking, payment, account, or external registration is involved.
@@ -28,18 +30,18 @@ After restoring saved state, the page registers ten titled tools with `document.
 
 WebMCP is experimental. In Chrome, enable **WebMCP for testing** at `chrome://flags/#enable-webmcp-testing` and relaunch, following the [Chrome setup guide](https://developer.chrome.com/docs/ai/webmcp). Your browser agent must support page-tool discovery and invocation. The flag exposes the API; it does not connect an agent by itself.
 
-| Tool | Purpose |
-| --- | --- |
-| `get_test_scenario` | Read the fixed task, current version, and advertised prices. |
-| `start_agent_run` | Start a new recorded agent run, replacing the previous one. |
-| `inspect_task_state` | Read both runs and simulated in-page records. |
-| `configure_registration` | Set `ticket: "general_admission"` and `seat: "quiet_zone"`; invalidate earlier review. |
-| `review_registration` | Return an itemized $94 preview, policy, and new `reviewToken`. |
-| `complete_simulated_task` | Complete according to the current contract; repaired mode requires `reviewToken` and `confirmed: true`. |
-| `get_human_interaction_trace` | Read actual human events, status, provenance, and elapsed time. |
-| `compare_human_agent_runs` | Compare completed runs of the same version and source. |
-| `submit_parity_finding` | Save a caller-supplied finding for visible review. |
-| `propose_interface_patch` | Save a visible text proposal; it does not execute or modify code. |
+| Tool                          | Purpose                                                                                                 |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `get_test_scenario`           | Read the fixed task, current version, and advertised prices.                                            |
+| `start_agent_run`             | Start a new recorded agent run, replacing the previous one.                                             |
+| `inspect_task_state`          | Read both runs and simulated in-page records.                                                           |
+| `configure_registration`      | Set `ticket: "general_admission"` and `seat: "quiet_zone"`; invalidate earlier review.                  |
+| `review_registration`         | Return an itemized $94 preview, policy, and new `reviewToken`.                                          |
+| `complete_simulated_task`     | Complete according to the current contract; repaired mode requires `reviewToken` and `confirmed: true`. |
+| `get_human_interaction_trace` | Read actual human events, status, provenance, and elapsed time.                                         |
+| `compare_human_agent_runs`    | Compare completed runs of the same version and source.                                                  |
+| `submit_parity_finding`       | Save a caller-supplied finding for visible review.                                                      |
+| `propose_interface_patch`     | Save a visible text proposal; it does not execute or modify code.                                       |
 
 All read tools, start, and review take `{}`. Baseline completion also takes `{}`. Repaired flow:
 
@@ -81,6 +83,8 @@ The previous `friction-lab-v1` snapshot is ignored because its traces used a dif
 
 Use Node.js 24+ and pnpm 11.19.0:
 
+A source distribution is packaged as `friction_1.1.1_source.zip`, its matching `.sha256` file and `SHA256SUMS`. Verify it with PowerShell `Get-FileHash friction_1.1.1_source.zip -Algorithm SHA256`, or Linux `sha256sum -c SHA256SUMS`. Enter the extracted `friction-1.1.1` folder and use the same frozen install below. The package includes the MIT license, frozen lockfile, fixed reproducible task and recovery guide.
+
 ```sh
 git clone https://github.com/agammann/friction-webmcp.git
 cd friction-webmcp
@@ -95,6 +99,8 @@ pnpm test
 pnpm lint
 pnpm typecheck
 pnpm audit
+pnpm test:audit-policy
+pnpm security:audit
 pnpm exec playwright install chromium
 pnpm exec playwright install chrome
 pnpm build
@@ -106,6 +112,8 @@ pnpm start
 Run the browser suites sequentially because their Wrangler processes share local storage. The ordinary suite uses port 3012; native tests use 3017. Stop a manually started Worker on either port before running its suite. For Linux CI, add `--with-deps` to each browser installation. `pnpm start` serves the built Worker through Wrangler. No API keys, database, or paid provider account are needed for local use.
 
 `lib/lab-model.ts` owns state transitions and comparison; `lib/lab-tools.ts` owns runtime validation and the ten handlers; `components/friction-lab.tsx` renders the same state. Both browser suites run the production Worker. Ordinary tests use a registration adapter to exercise the handlers and visible UI. The native suite calls the actual browser discovery and execution API without an adapter. GitHub Actions runs the audit, unit tests, lint, type checking, production build and both browser suites, and retains the native JSON report on every run.
+
+Current local candidate checks on October 7, 2026 used Windows, Node.js 24.19.0, pnpm 11.19.0, Playwright 1.58.2 and Chrome 155.0.8059.39. Twelve unit tests, typecheck, lint, production build, nine ordinary cases and five native cases passed. A separate visible recorded pair showed 48/100 with two baseline core failures, then 95/100 with all four repaired core checks passing; both scores matched their exported event counts and metrics. Completed records and reports survived reload exactly. A fresh ordinary mobile browser completed the visual task without WebMCP and kept illustrative pairs explicitly labeled. These local observations do not certify a new hosted deployment or a published release.
 
 ## Native verification
 
@@ -128,3 +136,5 @@ Live mode runs all five tests in fresh isolated contexts. It records whether the
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+The source distribution is made from a clean committed tree. CI verifies every source byte after extraction and runs both browser suites from that fresh copy. Only a verified main push can publish its same-run artifact. The full raw dependency audit remains required and currently exits 1 for the accepted high-severity production dependency finding. `pnpm security:audit` retains that report, verifies the exact documented exception and fails on changed findings, unavailable or malformed metadata and possible newly published patches. This is not a zero-finding audit. See [CONTRIBUTING.md](CONTRIBUTING.md).

@@ -1,6 +1,6 @@
 {
   "name": "friction-webmcp",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": true,
   "engines": {
     "node": ">=24"
@@ -14,7 +14,10 @@
     "lint": "oxlint app components lib types tests e2e",
     "format": "oxfmt",
     "test:e2e": "playwright test",
-    "test:webmcp": "playwright test --config playwright.webmcp.config.ts"
+    "test:webmcp": "playwright test --config playwright.webmcp.config.ts",
+    "package:release": "node scripts/package-release.mjs",
+    "test:audit-policy": "node --test scripts/audit-policy.test.mjs",
+    "security:audit": "node scripts/audit-policy.mjs"
   },
   "dependencies": {
     "@base-ui/react": "1.7.0",
@@ -48,5 +51,6 @@
     "wrangler": "4.145.0"
   },
   "type": "module",
-  "packageManager": "pnpm@11.19.0"
+  "packageManager": "pnpm@11.19.0",
+  "license": "MIT"
 }
