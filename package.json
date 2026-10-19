@@ -1,6 +1,6 @@
 {
   "name": "friction-webmcp",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "private": true,
   "engines": {
     "node": ">=24"
@@ -9,7 +9,7 @@
     "dev": "node dev.mjs",
     "build": "vinext build",
     "start": "wrangler dev --config dist/server/wrangler.json",
-    "test": "node --experimental-strip-types --test --test-isolation=none tests/*.test.ts",
+    "test": "node --experimental-strip-types --test --test-isolation=none tests/*.test.ts && node --test scripts/bounded-braces.test.cjs",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint app components lib types tests e2e",
     "format": "oxfmt",
@@ -48,7 +48,8 @@
     "tailwindcss": "4.2.1",
     "typescript": "5.9.3",
     "vite": "8.2.2",
-    "wrangler": "4.145.0"
+    "wrangler": "4.145.0",
+    "@agammann/bounded-braces": "file:vendor/bounded-braces"
   },
   "type": "module",
   "packageManager": "pnpm@11.19.0",

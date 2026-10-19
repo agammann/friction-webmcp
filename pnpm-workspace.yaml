@@ -24,3 +24,4 @@ overrides:
   react-dom: 19.2.8
   react-server-dom-webpack: 19.2.8
   vite: 8.2.2
+  braces: file:vendor/bounded-braces
