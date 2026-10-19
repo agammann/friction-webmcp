@@ -1,6 +1,6 @@
 # Security and dependency status
 
-Friction 1.1.1 supports the fixed simulated RelayConf task. It records browser-local evidence; it does not scan external systems, make real registrations or certify a remediation.
+Friction 1.1.2 supports the fixed simulated RelayConf task. It records browser-local evidence; it does not scan external systems, make real registrations or certify a remediation.
 
 Treat run content, caller-supplied findings and notes as untrusted. Browser storage and exported JSON are editable and are not independent audit evidence. Use one tab per experiment, export before replacing a run or applying the fixed repair, and review the recorded task evidence before drawing conclusions.
 

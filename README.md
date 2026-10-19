@@ -4,7 +4,7 @@
 
 [Open Friction](https://friction.alx21.chatgpt.site/) Â· [Source](https://github.com/agammann/friction-webmcp)
 
-Source **1.1.1** provides this bounded v1 lab with available dependency patches applied. See [upgrade and recovery guidance](docs/STABILITY.md).
+Source **1.1.2** provides this bounded v1 lab with available dependency patches applied. See [upgrade and recovery guidance](docs/STABILITY.md).
 
 ## What it does
 
@@ -83,7 +83,7 @@ The previous `friction-lab-v1` snapshot is ignored because its traces used a dif
 
 Use Node.js 24+ and pnpm 11.19.0:
 
-A source distribution is packaged as `friction_1.1.1_source.zip`, its matching `.sha256` file and `SHA256SUMS`. Verify it with PowerShell `Get-FileHash friction_1.1.1_source.zip -Algorithm SHA256`, or Linux `sha256sum -c SHA256SUMS`. Enter the extracted `friction-1.1.1` folder and use the same frozen install below. The package includes the MIT license, frozen lockfile, fixed reproducible task and recovery guide.
+A source distribution is packaged as `friction_1.1.2_source.zip`, its matching `.sha256` file and `SHA256SUMS`. Verify it with PowerShell `Get-FileHash friction_1.1.2_source.zip -Algorithm SHA256`, or Linux `sha256sum -c SHA256SUMS`. Enter the extracted `friction-1.1.2` folder and use the same frozen install below. The package includes the MIT license, frozen lockfile, fixed reproducible task and recovery guide.
 
 ```sh
 git clone https://github.com/agammann/friction-webmcp.git
