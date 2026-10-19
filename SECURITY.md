@@ -11,3 +11,13 @@ Install using the frozen lockfile and run `pnpm security:audit` when changing de
 ## Reporting
 
 For a suspected vulnerability, use the repository's private security reporting feature when available. Include the exact source version, affected behavior and supporting evidence. Do not post private run data, browser storage or credentials in a public issue.
+
+## Bounded brace tooling
+
+Transitive `braces` imports resolve to the repository-maintained
+`@agammann/bounded-braces` package in `vendor/bounded-braces`. It preserves the
+upstream MIT license and ordinary glob behavior, while rejecting excessive
+brace/parenthesis nesting and cyclic direct AST values before stack exhaustion.
+The 64-level safety bound cannot be disabled by caller options. The package
+README documents its origin and maintenance requirements. The regular test
+command verifies real tooling dependency edges and adversarial inputs.
