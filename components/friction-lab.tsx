@@ -3,30 +3,28 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
-import {
-  Activity,
-  ArrowRight,
-  Bot,
-  Check,
-  CheckCircle2,
-  ChevronDown,
-  CircleAlert,
-  Clock3,
-  Eye,
-  FileWarning,
-  GitCompareArrows,
-  ListChecks,
-  LockKeyhole,
-  MousePointer2,
-  Play,
-  RotateCcw,
-  ShieldCheck,
-  Sparkles,
-  UserRound,
-  Wrench,
-  X,
-  Zap,
-} from 'lucide-react';
+import Activity from 'lucide-react/icons/activity';
+import ArrowRight from 'lucide-react/icons/arrow-right';
+import Bot from 'lucide-react/icons/bot';
+import Check from 'lucide-react/icons/check';
+import CheckCircle2 from 'lucide-react/icons/circle-check';
+import ChevronDown from 'lucide-react/icons/chevron-down';
+import CircleAlert from 'lucide-react/icons/circle-alert';
+import Clock3 from 'lucide-react/icons/clock-3';
+import Eye from 'lucide-react/icons/eye';
+import FileWarning from 'lucide-react/icons/file-warning';
+import GitCompareArrows from 'lucide-react/icons/git-compare-arrows';
+import ListChecks from 'lucide-react/icons/list-checks';
+import LockKeyhole from 'lucide-react/icons/lock-keyhole';
+import MousePointer2 from 'lucide-react/icons/mouse-pointer-2';
+import Play from 'lucide-react/icons/play';
+import RotateCcw from 'lucide-react/icons/rotate-ccw';
+import ShieldCheck from 'lucide-react/icons/shield-check';
+import Sparkles from 'lucide-react/icons/sparkles';
+import UserRound from 'lucide-react/icons/user-round';
+import Wrench from 'lucide-react/icons/wrench';
+import X from 'lucide-react/icons/x';
+import Zap from 'lucide-react/icons/zap';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
