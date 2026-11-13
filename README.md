@@ -81,7 +81,7 @@ The previous `friction-lab-v1` snapshot is ignored because its traces used a dif
 
 ## Run locally
 
-Use Node.js 24+ and pnpm 11.19.0:
+For the current development checkout, use Node.js 24.x or 26.13.1+ within Node 26 and pnpm 11.19.0. Node 25 and other majors are outside the checked range. The published 1.1.2 archive predates these Node 26 checks:
 
 A source distribution is packaged as `friction_1.1.2_source.zip`, its matching `.sha256` file and `SHA256SUMS`. Verify it with PowerShell `Get-FileHash friction_1.1.2_source.zip -Algorithm SHA256`, or Linux `sha256sum -c SHA256SUMS`. Enter the extracted `friction-1.1.2` folder and use the same frozen install below. The package includes the MIT license, frozen lockfile, fixed reproducible task and recovery guide.
 
