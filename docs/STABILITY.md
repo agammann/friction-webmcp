@@ -10,7 +10,7 @@ Scores are calculated from retained events and outcomes. They describe this task
 
 1. Export the current report before restarting a side, loading examples, applying the repair or resetting. These actions replace the relevant runs.
 2. Keep the JSON with the source version and browser/version used. It includes both traces, results, comparison and notes; active review tokens are omitted.
-3. Verify the source ZIP's SHA256 against its accompanying checksums. Install with Node.js 24+ and pnpm 11.19.0 using the frozen lockfile.
+3. Verify the source ZIP's SHA256 against its accompanying checksums. The published 1.1.2 archive predates the Node 26 checks. For the current checkout, use Node.js 24.x or 26.13.1+ within Node 26 and pnpm 11.19.0 with the frozen lockfile; Node 25 and other majors are outside the checked range.
 4. Run a fresh controlled pair and compare its exported events with the visible score and findings. A hosted deployment requires its own acceptance check.
 
 ## Persistence and recovery

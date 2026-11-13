@@ -2,7 +2,7 @@
 
 Friction is a controlled browser-local comparison lab. Keep changes focused on the fixed RelayConf task, recorded evidence, explicit source labels and browser-tool lifecycle. Preserve the intentional baseline contract differences and the visible human approval of fixed repair FG-PATCH-01.
 
-Use Node.js 24+ and pnpm 11.19.0. Install with `pnpm install --frozen-lockfile`, then run `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm build`, `pnpm test:audit-policy` and `pnpm security:audit`. Inspect the retained full raw audit. Run `pnpm test:e2e` and `pnpm test:webmcp` sequentially after installing their browsers. Native checks require the browser's real experimental WebMCP API; ordinary registration-adapter checks do not certify it.
+For the current development checkout, use Node.js 24.x or 26.13.1+ within Node 26 and pnpm 11.19.0. Node 25 and other majors are outside the checked range; the published 1.1.2 archive predates the Node 26 checks. Install with `pnpm install --frozen-lockfile`, then run `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm build`, `pnpm test:audit-policy` and `pnpm security:audit`. Inspect the retained full raw audit. Run `pnpm test:e2e` and `pnpm test:webmcp` sequentially after installing their browsers. Native checks require the browser's real experimental WebMCP API; ordinary registration-adapter checks do not certify it.
 
 Explain the measured behavior, expected result and bounded impact. Include proportionate checks for meaningful behavior changes. Keep private runs, local storage, credentials, generated output and exploratory QA outside the source distribution.
 
