@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import './globals.css';
 
+export const dynamic = 'force-dynamic';
+
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ?? 'https://friction.alx21.chatgpt.site';
 

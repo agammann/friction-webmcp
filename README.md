@@ -2,9 +2,9 @@
 
 **A working browser lab for comparing a visual workflow with WebMCP tools.** Complete a simulated conference registration, inspect what each interface disclosed and required, and retest after applying a built-in repair.
 
-[Open Friction](https://friction.alx21.chatgpt.site/) Â· [Source](https://github.com/agammann/friction-webmcp)
+[Open Friction](https://friction.alx21.chatgpt.site/) · [Source](https://github.com/agammann/friction-webmcp)
 
-Source **1.1.2** provides this bounded v1 lab with available dependency patches applied. See [upgrade and recovery guidance](docs/STABILITY.md).
+Source **1.1.3** provides this bounded v1 lab with patched Vite development tooling and private entry-document revalidation. See [upgrade and recovery guidance](docs/STABILITY.md).
 
 ## What it does
 
@@ -55,7 +55,7 @@ compare_human_agent_runs({})
 
 Tokens are invalidated by another review, reconfiguration, restarting, patch activation, or completion. Completion cannot be repeated. Review previews have `confirmed: false`; only completed records have `confirmed: true`. Rejected configure/review/completion calls that reach the handler during a running trace are recorded, including their errors. A browser may reject invalid schema input before the handler runs; those refusals do not produce lab events. Read-only tool calls are not counted as workflow events.
 
-Findings require `severity` (`critical` or `moderate`), `dimension` (`Information`, `Consent`, or `Human effort`), `title` (5â€“160 characters), `evidence` (10â€“600), and `proposal` (10â€“600). Text proposals require `change` (10â€“500). Whitespace-only values and unexpected fields are rejected. Each collection is limited to 30 entries; traces are limited to 200 events. Export and reset/start a new run at the limit.
+Findings require `severity` (`critical` or `moderate`), `dimension` (`Information`, `Consent`, or `Human effort`), `title` (5–160 characters), `evidence` (10–600), and `proposal` (10–600). Text proposals require `change` (10–500). Whitespace-only values and unexpected fields are rejected. Each collection is limited to 30 entries; traces are limited to 200 events. Export and reset/start a new run at the limit.
 
 No approval tool is registered. The visible checkbox activates only the fixed patch FG-PATCH-01. It is a workflow boundary, not authentication or a guarantee that browser automation cannot operate the UI. Submitted findings and proposals are unverified notes and are shown as such.
 
@@ -67,7 +67,7 @@ A score is available only when both runs are complete, use the same version, and
 - **Information:** each side received the full itemized price and policy through review or completion (0 or 100). Reading the inspector alone is not counted as reviewing a draft.
 - **Consent:** both sides reviewed and explicitly confirmed (0 or 100).
 - **State:** both in-page final records match (0 or 100). This does not claim durable server storage.
-- **Action balance:** `round(100 Ã— smaller event count / larger event count)`, with a display threshold of 75. Counts include recorded UI actions, mutating registration calls, and rejected calls. They are a simple count heuristic, not equivalent units of human and agent effort.
+- **Action balance:** `round(100 × smaller event count / larger event count)`, with a display threshold of 75. Counts include recorded UI actions, mutating registration calls, and rejected calls. They are a simple count heuristic, not equivalent units of human and agent effort.
 
 The displayed total is the rounded average. Core failures count the first four checks; action balance is separate. Elapsed time is measured from start to the last event, includes waiting/background time, and does not affect the score. Friction does not infer hesitation, confusion, or backtracking from a clock. The score is never selected from the baseline/repaired label.
 
@@ -81,13 +81,14 @@ The previous `friction-lab-v1` snapshot is ignored because its traces used a dif
 
 ## Run locally
 
-For the current development checkout, use Node.js 24.x or 26.13.1+ within Node 26 and pnpm 11.19.0. Node 25 and other majors are outside the checked range. The published 1.1.2 archive predates these Node 26 checks:
+Use Node.js 24.x or 26.13.1+ within Node 26 and pnpm 11.19.0. Node 25 and other majors are outside the checked range. CI checks the 24.0.0 and 26.13.1 baselines.
 
-A source distribution is packaged as `friction_1.1.2_source.zip`, its matching `.sha256` file and `SHA256SUMS`. Verify it with PowerShell `Get-FileHash friction_1.1.2_source.zip -Algorithm SHA256`, or Linux `sha256sum -c SHA256SUMS`. Enter the extracted `friction-1.1.2` folder and use the same frozen install below. The package includes the MIT license, frozen lockfile, fixed reproducible task and recovery guide.
+A source distribution is packaged as `friction_1.1.3_source.zip`, its matching `.sha256` file and `SHA256SUMS`, from the [1.1.3 release](https://github.com/agammann/friction-webmcp/releases/tag/v1.1.3). Verify it with PowerShell `Get-FileHash friction_1.1.3_source.zip -Algorithm SHA256`, or Linux `sha256sum -c SHA256SUMS`. Enter the extracted `friction-1.1.3` folder and use the same frozen install below. The package includes the MIT license, frozen lockfile, fixed reproducible task and recovery guide.
 
 ```sh
 git clone https://github.com/agammann/friction-webmcp.git
 cd friction-webmcp
+git checkout v1.1.3
 pnpm install --frozen-lockfile
 pnpm dev
 ```

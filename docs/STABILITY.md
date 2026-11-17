@@ -1,6 +1,6 @@
 # Friction v1 scope, upgrade and recovery
 
-Source 1.1.1 freezes one controlled task: register for General admission and a quiet-zone seat at fictional RelayConf, compare recorded visual and page-tool interactions, then repeat under fixed repair FG-PATCH-01.
+Source 1.1.3 freezes one controlled task: register for General admission and a quiet-zone seat at fictional RelayConf, compare recorded visual and page-tool interactions, then repeat under fixed repair FG-PATCH-01.
 
 The total is $94: $72 ticket, $10 seat and $12 service fee. Baseline agent completion deliberately returns only the $82 subtotal and does not require review or confirmation. The fixed repair requires the current review token and explicit confirmation, returns the full itemized result and makes the seat option easier to find. These intentional baseline differences remain part of the experiment.
 
@@ -10,7 +10,7 @@ Scores are calculated from retained events and outcomes. They describe this task
 
 1. Export the current report before restarting a side, loading examples, applying the repair or resetting. These actions replace the relevant runs.
 2. Keep the JSON with the source version and browser/version used. It includes both traces, results, comparison and notes; active review tokens are omitted.
-3. Verify the source ZIP's SHA256 against its accompanying checksums. The published 1.1.2 archive predates the Node 26 checks. For the current checkout, use Node.js 24.x or 26.13.1+ within Node 26 and pnpm 11.19.0 with the frozen lockfile; Node 25 and other majors are outside the checked range.
+3. Verify the source ZIP's SHA256 against its accompanying checksums. Use Node.js 24.x or 26.13.1+ within Node 26 and pnpm 11.19.0 with the frozen lockfile; Node 25 and other majors are outside the checked range. CI checks the 24.0.0 and 26.13.1 baselines.
 4. Run a fresh controlled pair and compare its exported events with the visible score and findings. A hosted deployment requires its own acceptance check.
 
 ## Persistence and recovery
@@ -26,3 +26,15 @@ The old `friction-lab-v1` snapshot is ignored because its traces used a differen
 Ordinary browsers support the visual flow and labeled examples. Recorded agent runs require the actual experimental browser WebMCP API and a client that discovers the open page's tools. The browser flag alone does not attach an agent. The ten tools register after state restoration, withdraw on page hide and return after supported cached navigation.
 
 Hosted acceptance remains a separate check.
+
+The generic entry document bypasses framework ISR and uses
+`Cache-Control: private, no-cache, max-age=0, must-revalidate`, including root RSC
+queries. Shared caches cannot retain it; a browser may store the generic shell
+but must revalidate. Static asset policies and local run storage are unchanged.
+This increases Worker document renders while reducing stale-document retention.
+
+After publication, check repeated GET/HEAD HTML and RSC policy, referenced JS/CSS
+bytes and MIME types, missing-asset404 and the real native lifecycle suite. Inspect
+existing state before any recorded run or repair approval. These controls cannot
+purge already-cached HTML or guarantee atomic platform rollouts; no prior Friction
+asset mismatch is claimed.

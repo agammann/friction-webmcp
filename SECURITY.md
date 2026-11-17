@@ -1,12 +1,19 @@
 # Security and dependency status
 
-Friction 1.1.2 supports the fixed simulated RelayConf task. It records browser-local evidence; it does not scan external systems, make real registrations or certify a remediation.
+Friction 1.1.3 supports the fixed simulated RelayConf task. It records browser-local evidence; it does not scan external systems, make real registrations or certify a remediation.
 
 Treat run content, caller-supplied findings and notes as untrusted. Browser storage and exported JSON are editable and are not independent audit evidence. Use one tab per experiment, export before replacing a run or applying the fixed repair, and review the recorded task evidence before drawing conclusions.
 
 ## Dependencies
 
 Install using the frozen lockfile and run `pnpm security:audit` when changing dependencies. CI retains the complete audit reports and checks current dependency metadata. Available transitive patches are applied through scoped overrides.
+
+Source 1.1.3 uses Vite 8.3.7 with patched Rolldown for
+[GHSA-p4f5-76q4-ffq7](https://github.com/vitejs/vite/security/advisories/GHSA-p4f5-76q4-ffq7).
+The previous Vite 8.2.4 is affected even when registry audit findings are zero.
+The advisory concerns development servers explicitly exposed to the network,
+not the deployed Worker. Preserve the default localhost development binding
+unless network access is intentional.
 
 ## Reporting
 
