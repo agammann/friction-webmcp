@@ -90,12 +90,23 @@ async function approve(page: Page) {
   await ready(page);
 }
 async function schemaCheck(page: Page, state: LabState) {
-  const actual = await page.evaluate(async () =>
-    (document.modelContext as unknown as NativeContext).getTools(),
-  );
+  const actual = await page.evaluate(async () => {
+    const native = document.modelContext as unknown as NativeContext;
+    // Native tool metadata may be exposed through prototype getters.
+    return (await native.getTools()).map(
+      ({ name, title, origin, inputSchema, annotations }) => ({
+        name,
+        title,
+        origin,
+        inputSchema,
+        annotations,
+      }),
+    );
+  });
   expect(actual).toHaveLength(10);
   for (const tool of contracts(state)) {
-    const registered = actual.find((item) => item.name === tool.name)!;
+    const registered = actual.find((item) => item.name === tool.name);
+    if (!registered) throw new Error(`Native discovery did not return ${tool.name}`);
     expect(registered.title).toBe(tool.title);
     expect(
       typeof registered.inputSchema === 'string'
